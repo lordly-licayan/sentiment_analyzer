@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Sentiment Training Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', path='/css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- TAB HEADERS -->
+      <div class="tabs">
+        <div class="tab active" onclick="openTab('models')">Models</div>
+        <div class="tab" onclick="openTab('upload')">Upload Dataset</div>
+        <div class="tab" onclick="openTab('files')">Uploaded Files</div>
+        <div class="tab" onclick="openTab('comments')">View Comments</div>
+        <div class="tab" onclick="openTab('report')">Report</div>
+      </div>
+
+      <!-- MODELS TAB -->
+      <div id="models" class="tab-content active">
+        <h2>Trained Models</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>SY</th>
+              <th>Semester</th>
+              <th>Model Name</th>
+              <th>Location</th>
+              <th>No Of Data</th>
+              <th>Trained Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in models %}
+            <tr>
+              <td>{{ m.SY }}</td>
+              <td>{{ m.Semester }}</td>
+              <td>{{ m.ModelName }}</td>
+              <td>{{ m.Location }}</td>
+              <td>{{ m.NoOfData }}</td>
+              <td>{{ m.TrainedDate }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- UPLOAD DATASET TAB -->
+      <div id="upload" class="tab-content">
+        <h2>Upload CSV Dataset</h2>
+
+        <div id="dropzone" class="dropzone">
+          Drag & Drop CSV here<br /><br />
+          or click to browse
+        </div>
+
+        <input type="file" id="fileInput" accept=".csv" style="display: none" />
+        <div id="fileName"></div>
+
+        <select id="schoolYearSelect">
+          <option value="">Select School Year</option>
+          {% for sy in school_years %}
+          <option value="{{ sy }}">{{ sy }}</option>
+          {% endfor %}
+        </select>
+
+        <select id="semesterSelect">
+          <option value="">Select Semester</option>
+          {% for sem in semesters %}
+          <option value="{{ sem }}">{{ sem }}</option>
+          {% endfor %}
+        </select>
+
+        <select id="datasetTypeSelect">
+          <option value="">Select Dataset Type</option>
+          {% for item in dataset_type %}
+          <option value="{{ item }}">{{ item }}</option>
+          {% endfor %}
+        </select>
+
+        <button onclick="uploadCSV()">Upload</button>
+      </div>
+
+      <!-- UPLOADED FILES TAB -->
+      <div id="files" class="tab-content">
+        <h2>Uploaded Files</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Data Type</th>
+              <th>Filename</th>
+              <th>Hash</th>
+              <th>No Of Data</th>
+              <th>Date Uploaded</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in uploaded_files %}
+            <tr>
+              <td>{{ f.DataType }}</td>
+              <td>{{ f.Filename }}</td>
+              <td>{{ f.Hash }}</td>
+              <td>{{ f.NoOfData }}</td>
+              <td>{{ f.DateUploaded }}</td>
+              <td>
+                <button class="btn btn-view" onclick="viewComments({{ f.Id }})">
+                  Comments
+                </button>
+                <button class="btn btn-report" onclick="viewReport({{ f.Id }})">
+                  Report
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- VIEW COMMENTS TAB -->
+      <div id="comments" class="tab-content">
+        <h2>Comments</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Comment</th>
+              <th>Label</th>
+              <th>Is Trained Data</th>
+            </tr>
+          </thead>
+          <tbody id="commentsTable">
+            {% for c in comments %}
+            <tr>
+              <td>{{ c.Comment }}</td>
+              <td>{{ c.Label }}</td>
+              <td>{{ c.IsTrainedData }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- REPORT TAB -->
+      <div id="report" class="tab-content">
+        <h2>Training Reports</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Trained Data Filename</th>
+              <th>Test Data Filename</th>
+              <th>Processed Date</th>
+              <th>Report</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in training_reports %}
+            <tr>
+              <td>{{ r.TrainedFilename }}</td>
+              <td>{{ r.TestFilename }}</td>
+              <td>{{ r.ProcessedDate }}</td>
+              <td>{{ r.Report }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="/static/script/app.js"></script>
+  </body>
+</html>
