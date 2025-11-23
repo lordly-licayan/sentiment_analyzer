@@ -13,7 +13,7 @@
       <!-- TAB HEADERS -->
       <div class="tabs">
         <div class="tab active" onclick="openTab('models')">Models</div>
-        <div class="tab" onclick="openTab('upload')">Upload Dataset</div>
+        <div class="tab" onclick="openTab('train_model')">Train Model</div>
         <div class="tab" onclick="openTab('files')">Uploaded Files</div>
         <div class="tab" onclick="openTab('comments')">View Comments</div>
         <div class="tab" onclick="openTab('report')">Report</div>
@@ -48,9 +48,9 @@
         </table>
       </div>
 
-      <!-- UPLOAD DATASET TAB -->
-      <div id="upload" class="tab-content">
-        <h2>Upload CSV Dataset</h2>
+      <!-- TRAIN A MODEL TAB -->
+      <div id="train_model" class="tab-content">
+        <h2>Upload CSV for training a model</h2>
 
         <div id="dropzone" class="dropzone">
           Drag & Drop CSV here<br /><br />
@@ -60,28 +60,65 @@
         <input type="file" id="fileInput" accept=".csv" style="display: none" />
         <div id="fileName"></div>
 
-        <select id="schoolYearSelect">
-          <option value="">Select School Year</option>
-          {% for sy in school_years %}
-          <option value="{{ sy }}">{{ sy }}</option>
-          {% endfor %}
-        </select>
+        <div style="display: flex; gap: 10px; align-items: center">
+          <select id="schoolYearSelect">
+            <option value="">Select School Year</option>
+            {% for sy in school_years %}
+            <option value="{{ sy }}">{{ sy }}</option>
+            {% endfor %}
+          </select>
 
-        <select id="semesterSelect">
-          <option value="">Select Semester</option>
-          {% for sem in semesters %}
-          <option value="{{ sem }}">{{ sem }}</option>
-          {% endfor %}
-        </select>
+          <select id="semesterSelect">
+            <option value="">Select Semester</option>
+            {% for sem in semesters %}
+            <option value="{{ sem }}">{{ sem }}</option>
+            {% endfor %}
+          </select>
 
-        <select id="datasetTypeSelect">
-          <option value="">Select Dataset Type</option>
-          {% for item in dataset_type %}
-          <option value="{{ item }}">{{ item }}</option>
-          {% endfor %}
-        </select>
+          <button id="trainBtn" onclick="train_model()">Train</button>
+        </div>
+        <!-- Progress Bar Section -->
+        <div id="progressContainer" style="display: none; margin-top: 20px">
+          <div
+            id="progressLabel"
+            style="font-size: 14px; margin-bottom: 6px; color: #333"
+          >
+            Initializing...
+          </div>
 
-        <button onclick="uploadCSV()">Upload</button>
+          <div
+            style="
+              background: #e5e7eb;
+              height: 20px;
+              width: 100%;
+              border-radius: 8px;
+              overflow: hidden;
+            "
+          >
+            <div
+              id="progressBar"
+              style="
+                background: #10b981;
+                width: 0%;
+                height: 100%;
+                transition: width 0.25s ease;
+              "
+            ></div>
+          </div>
+
+          <div
+            id="progressPercent"
+            style="margin-top: 5px; font-size: 13px; color: #555"
+          >
+            0%
+          </div>
+        </div>
+        <div id="report-info">
+          <p>Status: <span id="status"></span></p>
+          <p>Message: <span id="message"></span></p>
+          <p>Accuracy: <span id="accuracy"></span></p>
+          <p>Report: <span id="report"></span></p>
+        </div>
       </div>
 
       <!-- UPLOADED FILES TAB -->

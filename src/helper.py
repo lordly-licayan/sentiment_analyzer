@@ -4,8 +4,8 @@ import logging
 
 import pandas as pd
 from sentence_transformers import SentenceTransformer
-from src import EMBEDDER_MODEL, TEST_DATA_PATH
-
+from src import EMBEDDER_MODEL, JOBS, TEST_DATA_PATH
+from uuid import uuid4
 
 # -----------------------------------------------------------
 # LOGGING CONFIGURATION
@@ -188,3 +188,46 @@ def generate_semesters():
 def generate_dataset_type():
     dataset_types = ["Training", "Test"]
     return dataset_types
+
+
+def create_job():
+    """
+    Create a new job entry in JOBS and return the job_id.
+    """
+
+    job_id = str(uuid4())
+    JOBS[job_id] = {
+        "status": "queued",
+        "progress": "",
+        "message": "Job created",
+        "accuracy": "",
+        "errors": "",
+        "report": "",
+    }
+    return job_id
+
+
+def update_job(job_id, **kwargs):
+    """
+    Update fields of JOBS[job_id] safely.
+
+    Example:
+        update_job(job_id, progress=50, message="Halfway done")
+    """
+    if job_id not in JOBS:
+        raise KeyError(f"Job ID '{job_id}' does not exist in JOBS.")
+
+    for key, value in kwargs.items():
+        if key in JOBS[job_id]:
+            JOBS[job_id][key] = value
+        else:
+            # optional: allow dynamic fields OR raise an error
+            JOBS[job_id][key] = value  # add new fields if needed
+
+
+def remove_job(job_id):
+    """
+    Remove a job entry from JOBS.
+    """
+    if job_id in JOBS:
+        del JOBS[job_id]

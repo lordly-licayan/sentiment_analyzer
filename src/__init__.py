@@ -8,6 +8,7 @@ LABEL_MAP = os.getenv("LABEL_MAP")
 EMBEDDER_MODEL = os.getenv("EMBEDDER_MODEL")
 TEST_DATA_PATH = os.getenv("TEST_DATA_PATH")
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), os.getenv("MODEL_DIR"), os.getenv("MODEL_NAME"))
+#MODEL_PATH = os.path.join(os.path.dirname(__file__), os.getenv("MODEL_DIR"), os.getenv("MODEL_NAME"))
+MODEL_PATH = os.path.join(os.getenv("MODEL_DIR"), os.getenv("MODEL_NAME"))
 
 JOBS = {}  # In-memory job store

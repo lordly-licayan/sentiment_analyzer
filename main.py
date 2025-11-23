@@ -18,7 +18,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 import uvicorn
-from src.helper import logger
+from src.helper import create_job, logger, update_job
 import src.helper as helper
 
 from src.trainer import process_data_and_train, JOBS, MODEL_PATH
@@ -44,35 +44,28 @@ app.add_middleware(
 # -----------------------------------------------------------
 # ROUTES
 # -----------------------------------------------------------
-@app.post("/upload")
-async def upload(
+@app.post("/train_model")
+async def train_model(
     background: BackgroundTasks,
     file: UploadFile = File(...),
     sy: str = Form(...),
     semester: str = Form(...),
-    datasetType: str = Form(...),
 ):
-    logger.info(f"Received file upload: {file.filename}")
-    logger.info(f"sy: {sy}")
-    logger.info(f"semester: {semester}")
-    logger.info(f"datasetType: {datasetType}")
-
     if not file.filename.endswith(".csv"):
         logger.warning("File rejected — not CSV")
         raise HTTPException(status_code=400, detail="Uploaded file must be a CSV")
 
     content = await file.read()
 
-    job_id = str(uuid4())
-    JOBS[job_id] = {"status": "queued", "detail": None, "result": None}
+    job_id = create_job()
 
     logger.info(f"Created job {job_id} — queued for background processing")
     background.add_task(process_data_and_train, job_id, content)
 
-    return {"job_id": job_id, "status": "queued"}
+    return {"job_id": job_id}
 
 
-@app.get("/job-status/{job_id}")
+@app.get("/training-status/{job_id}")
 def job_status(job_id: str):
     logger.info(f"Checking job status for {job_id}")
 

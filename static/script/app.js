@@ -54,11 +54,74 @@ fileInput.addEventListener("change", () => {
   }
 });
 
-async function uploadCSV() {
+function updateProgressUI(percent, label) {
+  const bar = document.getElementById("progressBar");
+  const text = document.getElementById("progressPercent");
+  const labelText = document.getElementById("progressLabel");
+
+  bar.style.width = percent;
+  text.innerText = percent;
+  labelText.innerText = label;
+}
+
+function pollTraining(job_id) {
+  const interval = setInterval(async () => {
+    try {
+      const res = await fetch(`/training-status/${job_id}`);
+
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status} ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      document.getElementById("status").innerText = data.status;
+      updateProgressUI(data.progress, data.message);
+
+      if (data.status === "Complete") {
+        clearInterval(interval);
+        document.getElementById("progressLabel").innerText = "";
+
+        document.getElementById("report-info").style.display = "block";
+        document.getElementById("message").innerText = data.message;
+        document.getElementById("accuracy").innerText = data.accuracy;
+        document.getElementById("report").innerText = JSON.stringify(
+          data.report
+        );
+        startTraining(false);
+        alert("Training completed!");
+      }
+
+      if (data.status?.startsWith("Error")) {
+        clearInterval(interval);
+        startTraining(false);
+        updateProgressUI(0, data.message);
+        console.error("Error:", data.message);
+      }
+    } catch (err) {
+      // Handle HTTP 500, network drops, JSON parsing failures
+      clearInterval(interval);
+      startTraining(false);
+      console.error("Polling error:", err);
+    }
+  }, 1000);
+}
+
+function startTraining(enable) {
+  const btn = document.getElementById("trainBtn");
+  btn.disabled = enable;
+
+  if (enable) {
+    btn.innerText = "Training...";
+  } else {
+    btn.innerText = "Train";
+  }
+}
+
+async function train_model() {
   const fileInput = document.getElementById("fileInput");
   const schoolYearSelect = document.getElementById("schoolYearSelect");
   const semesterSelect = document.getElementById("semesterSelect");
-  const datasetTypeSelect = document.getElementById("datasetTypeSelect");
 
   // --- VALIDATIONS ---
   if (!fileInput.files || fileInput.files.length === 0) {
@@ -83,35 +146,42 @@ async function uploadCSV() {
     return;
   }
 
-  if (!datasetTypeSelect.value) {
-    alert("Please choose a Dataset Type (training/testing).");
-    return;
-  }
-
-  // --- UPLOAD ---
+  // --- TRAINING MODEL ---
   const formData = new FormData();
   formData.append("file", file); // CSV File
   formData.append("sy", schoolYearSelect.value); // School Year
   formData.append("semester", semesterSelect.value); // Semester
-  formData.append("datasetType", datasetTypeSelect.value); // Dataset Type
+
+  startTraining(true);
+  document.getElementById("report-info").style.display = "none";
+
+  // Show progress UI
+  document.getElementById("progressContainer").style.display = "block";
+  updateProgressUI(0, "Starting...");
+
+  document.getElementById("accuracy").innerText = "";
+  document.getElementById("report").innerText = "";
 
   try {
-    const res = await fetch("/upload", {
+    const res = await fetch("/train_model", {
       method: "POST",
       body: formData,
     });
 
     if (!res.ok) {
-      alert("Upload failed.");
+      alert("Training failed.");
       return;
     }
 
     const data = await res.json();
-    alert("Upload complete!");
+    const job_id = data.job_id;
+    pollTraining(job_id);
+
     console.log(data);
   } catch (err) {
     console.error(err);
-    alert("Error uploading file.");
+    startTraining(false);
+    alert("Error training a model.");
   }
 }
 
@@ -125,3 +195,5 @@ function viewReport(fileId) {
   openTab("report");
   alert("Load training report via API for File ID: " + fileId);
 }
+
+document.getElementById("report-info").style.display = "none";

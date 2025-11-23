@@ -125,3 +125,19 @@ button {
 button:hover {
   background: #0c6ccc;
 }
+
+button:disabled {
+  background-color: #9ca3af; /* gray */
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.action-btn {
+  background-color: #10b981; /* green */
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: 0.2s ease;
+}
