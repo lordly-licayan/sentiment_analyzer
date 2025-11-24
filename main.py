@@ -4,8 +4,18 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+
 import uvicorn
 from src import (
     DEFAULT_CLASSIFIER,
@@ -13,7 +23,10 @@ from src import (
     LABEL_MAP,
     SUPPORTED_CLASSIFIERS,
 )
-from src.helper import create_job, logger
+from src.db.database import get_db
+from src.db.models import FileInfo
+from src.db.schemas import FileInfoCreate, TrainModelForm, TrainModelFormDependency
+from src.helper import create_job, get_file_hash, logger
 import src.helper as helper
 
 from src.trainer import process_data_and_train, JOBS
@@ -42,23 +55,22 @@ app.add_middleware(
 @app.post("/train_model")
 async def train_model(
     background: BackgroundTasks,
-    modelName: str = Form(...),
     file: UploadFile = File(...),
-    sy: str = Form(...),
-    semester: str = Form(...),
-    classifierModel: str = Form(...),
+    form_data: TrainModelForm = Depends(TrainModelFormDependency),
+    db: Session = Depends(get_db),
 ):
     if not file.filename.endswith(".csv"):
         logger.warning("File rejected — not CSV")
         raise HTTPException(status_code=400, detail="Uploaded file must be a CSV")
 
-    content = await file.read()
+    filename = file.filename
+    file_content = await file.read()
 
     job_id = create_job()
 
     logger.info(f"Created job {job_id} — queued for background processing")
     background.add_task(
-        process_data_and_train, job_id, modelName, classifierModel, content
+        process_data_and_train, job_id, filename, file_content, form_data, db
     )
 
     return {"job_id": job_id}

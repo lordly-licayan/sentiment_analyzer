@@ -5,6 +5,8 @@ import traceback
 import numpy as np
 import pandas as pd
 from io import StringIO
+
+from sqlalchemy.orm import Session
 from src import (
     DEFAULT_CLASSIFIER,
     JOBS,
@@ -12,8 +14,12 @@ from src import (
     TRAINED_MODEL_DIR,
     DEFAULT_TRAINED_MODEL_NAME,
 )
+
+from src.db.crud.fileinfo import create_fileinfo
+from src.db.schemas import FileInfoBase, TrainModelForm
 from src.helper import (
     format_seconds,
+    get_file_hash,
     logger,
     process_data,
     get_embedder,
@@ -101,7 +107,7 @@ def save_model(
 # BACKGROUND TASK (TRAINING)
 # -----------------------------------------------------------
 def process_data_and_train(
-    job_id: str, model_name: str, classifier_model: str, content: bytes
+    job_id: str, filename: str, file_content: bytes, data: TrainModelForm, db: Session
 ):
     start_time = time.time()
     logger.info(f"[{job_id}] Background task started.")
@@ -115,13 +121,22 @@ def process_data_and_train(
 
         logger.info(f"[{job_id}] Decoding CSV bytes")
 
-        s = content.decode("utf-8", errors="ignore")
+        s = file_content.decode("utf-8", errors="ignore")
         df = pd.read_csv(StringIO(s))
         logger.info(f"[{job_id}] CSV loaded | Rows: {len(df)}")
 
         comments, labels, errors = process_data(df)
+        no_of_data = len(comments)
+        file_hash = get_file_hash(file_content)
+        file_info = FileInfoBase(
+            file_id=file_hash,
+            filename=filename,
+            no_of_data=no_of_data,
+            feedback=str(errors),
+        )
+        create_fileinfo(db, file_info)
 
-        if len(comments) == 0:
+        if no_of_data == 0:
             logger.info(f"[{job_id}] No valid data to train on.")
             update_job(job_id, status="Complete", message="No valid data to train on.")
             return
@@ -147,14 +162,14 @@ def process_data_and_train(
         # ---------------------------------------
         logger.info(f"[{job_id}] Training model using SGDClassifier")
         clf, report = perform_training(
-            job_id, model_name, classifier_model, X_train, y_train
+            job_id, data.modelName, data.classifierModel, X_train, y_train
         )
         logger.info(f"[{job_id}] Report: {report}")
 
         # ---------------------------------------
         # Save model
         # ---------------------------------------
-        save_model(job_id, clf, classifier_model, model_name)
+        save_model(job_id, clf, data.classifierModel, data.modelName)
 
         elapsedTime = format_seconds(time.time() - start_time)
         logger.info(f"[{job_id}] Training completed in {elapsedTime}.")

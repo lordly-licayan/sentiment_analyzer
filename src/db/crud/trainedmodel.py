@@ -1,0 +1,46 @@
+# crud/trainedmodel.py
+from sqlalchemy.orm import Session
+from .. import models, schemas
+
+
+def create_trained_model(db: Session, model: schemas.TrainedModelCreate):
+    db_model = models.TrainedModel(**model.dict())
+    db.add(db_model)
+    db.commit()
+    db.refresh(db_model)
+    return db_model
+
+
+def list_trained_models(db: Session):
+    return db.query(models.TrainedModel).all()
+
+
+def get_trained_model(db: Session, model_id: int):
+    return (
+        db.query(models.TrainedModel).filter(models.TrainedModel.Id == model_id).first()
+    )
+
+
+def update_trained_model(
+    db: Session, model_id: int, update: schemas.TrainedModelCreate
+):
+    db_model = get_trained_model(db, model_id)
+    if not db_model:
+        return None
+
+    for key, val in update.dict().items():
+        setattr(db_model, key, val)
+
+    db.commit()
+    db.refresh(db_model)
+    return db_model
+
+
+def delete_trained_model(db: Session, model_id: int):
+    db_model = get_trained_model(db, model_id)
+    if not db_model:
+        return None
+
+    db.delete(db_model)
+    db.commit()
+    return True

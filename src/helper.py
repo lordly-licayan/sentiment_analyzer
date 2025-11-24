@@ -1,4 +1,6 @@
+import base64
 from datetime import datetime
+import hashlib
 import re
 import logging
 
@@ -241,4 +243,10 @@ def format_seconds(total_seconds):
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
 
-    return f"{hours} hours : {minutes} minutes : {seconds} seconds"
+    return f"{hours} hours : {minutes} minutes : {seconds:.2f} seconds"
+
+
+def get_file_hash(content):
+    sha256_hash = hashlib.sha256(content).digest()
+    file_hash = base64.urlsafe_b64encode(sha256_hash).decode("utf-8").rstrip("=")
+    return file_hash
