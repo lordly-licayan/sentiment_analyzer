@@ -4,7 +4,7 @@ import logging
 
 import pandas as pd
 from sentence_transformers import SentenceTransformer
-from src import EMBEDDER_MODEL, JOBS, TEST_DATA_PATH
+from src import EMBEDDER_MODEL, JOBS, LABEL_MAP, TEST_DATA_PATH
 from uuid import uuid4
 
 # -----------------------------------------------------------
@@ -116,14 +116,11 @@ def process_data(df: pd.DataFrame):
     return comments, labels, errors
 
 
-def convert_label_to_sentiment(labels: list, label_map=None):
+def convert_label_to_sentiment(labels: list, label_map=LABEL_MAP):
     """
     Convert a list of numeric labels (-1, 0, 1) to sentiment strings.
     label_map must be like {"negative": -1, "neutral": 0, "positive": 1}
     """
-    if label_map is None:
-        label_map = {"negative": -1, "neutral": 0, "positive": 1}
-
     # Invert the map so we can look up by numeric value
     inverse_map = {v: k for k, v in label_map.items()}
 
@@ -157,7 +154,7 @@ def save_comments_to_csv(comments, labels, output_path="output.csv"):
 
     # Save to CSV
     df.to_csv(output_path, index=False, encoding="utf-8")
-    print(f"CSV successfully saved to {output_path}")
+    logger.info(f"CSV successfully saved to {output_path}")
 
 
 def get_embedder(model_name=EMBEDDER_MODEL):

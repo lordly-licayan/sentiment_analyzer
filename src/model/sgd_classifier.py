@@ -104,7 +104,7 @@ def train_sgd_classifier(job_id, clf, X_train, y_train, batch_size=64):
         else:
             wait += 1
         if wait >= patience:
-            print("⏹ Early stopping triggered")
+            logger.warning("⏹ Early stopping triggered")
             break
 
         update_job(
@@ -113,7 +113,6 @@ def train_sgd_classifier(job_id, clf, X_train, y_train, batch_size=64):
             accuracy=f"{acc * 100:.2f}%",
             message=f"Training epoch {epoch+1}/{epochs}.",
         )
-        print(JOBS[job_id])
 
     # Final report
     report = classification_report(y_train, y_pred, output_dict=True)

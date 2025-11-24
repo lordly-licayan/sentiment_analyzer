@@ -5,13 +5,23 @@ import traceback
 import numpy as np
 import pandas as pd
 from io import StringIO
-from src import JOBS, TRAINED_MODEL_DIR, DEFAULT_TRAINED_MODEL_NAME
+from src import (
+    DEFAULT_CLASSIFIER,
+    JOBS,
+    SUPPORTED_CLASSIFIERS,
+    TRAINED_MODEL_DIR,
+    DEFAULT_TRAINED_MODEL_NAME,
+)
 from src.helper import (
     logger,
     process_data,
     get_embedder,
     convert_label_to_sentiment,
     update_job,
+)
+from src.model.logistic_regression import (
+    create_logistic_regression,
+    train_logistic_regression,
 )
 from src.model.sgd_classifier import get_model, train_sgd_classifier
 
@@ -54,21 +64,30 @@ def perform_training(job_id, model_name, classifier_model, X_train, y_train):
     """
     Perform training using the specified classifier.
     """
-    clf = get_model(model_name)
-    report = train_sgd_classifier(job_id, clf, X_train, y_train)
+    if classifier_model == DEFAULT_CLASSIFIER:
+        clf = create_logistic_regression()
+        report = train_logistic_regression(job_id, clf, X_train, y_train)
+    else:
+        clf = get_model(model_name)
+        report = train_sgd_classifier(job_id, clf, X_train, y_train)
     return clf, report
 
 
 def save_model(
-    job_id, clf, model_name=DEFAULT_TRAINED_MODEL_NAME, model_dir=TRAINED_MODEL_DIR
+    job_id,
+    clf,
+    classifier_model,
+    model_name=DEFAULT_TRAINED_MODEL_NAME,
+    model_dir=TRAINED_MODEL_DIR,
 ):
     """
     Save the trained model to disk.
     """
-    model_path = os.path.join(model_dir, model_name)
+    ext = SUPPORTED_CLASSIFIERS.get(classifier_model)
+    # SUPPORTED_CLASSIFIERS[classifier_model]
+    model_path = os.path.join(model_dir, f"{model_name}.{ext}")
     joblib.dump(clf, model_path)
     logger.info(f"Model saved to {model_path}")
-    print(f"JOBS: {JOBS}")
 
     update_job(
         job_id,
@@ -117,7 +136,7 @@ def process_data_and_train(
         update_job(
             job_id,
             status="Embedding",
-            message="Start embedding the dataset...",
+            message="Embedding the dataset started...",
         )
         X_train = perform_embedding(job_id, comments)
         y_train = np.array(convert_label_to_sentiment(labels))
@@ -134,7 +153,7 @@ def process_data_and_train(
         # ---------------------------------------
         # Save model
         # ---------------------------------------
-        save_model(job_id, clf, model_name)
+        save_model(job_id, clf, classifier_model, model_name)
 
         elapsed = time.time() - start_time
         logger.info(f"[{job_id}] Training completed in {elapsed:.2f} seconds")

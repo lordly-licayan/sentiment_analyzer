@@ -123,9 +123,7 @@ async function train_model() {
   const modelName = document.getElementById("modelName").value.trim();
 
   if (!isValidModelName(modelName)) {
-    alert(
-      "Invalid model name. Ensure it has no spaces and ends with .pkl extension."
-    );
+    alert("Invalid model name. Ensure it has no spaces.");
     return;
   }
 
@@ -217,9 +215,9 @@ function isValidModelName(filename) {
   }
 
   // Check if it ends with .pkl (case-insensitive)
-  if (!filename.toLowerCase().endsWith(".pkl")) {
-    return false;
-  }
+  // if (!filename.toLowerCase().endsWith(".pkl")) {
+  //   return false;
+  // }
 
   return true;
 }

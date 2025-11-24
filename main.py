@@ -7,7 +7,12 @@ from fastapi.templating import Jinja2Templates
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from src import DEFAULT_CLASSIFIER, DEFAULT_TRAINED_MODEL_NAME, SUPPORTED_CLASSIFIERS
+from src import (
+    DEFAULT_CLASSIFIER,
+    DEFAULT_TRAINED_MODEL_NAME,
+    LABEL_MAP,
+    SUPPORTED_CLASSIFIERS,
+)
 from src.helper import create_job, logger
 import src.helper as helper
 
@@ -46,8 +51,6 @@ async def train_model(
     if not file.filename.endswith(".csv"):
         logger.warning("File rejected — not CSV")
         raise HTTPException(status_code=400, detail="Uploaded file must be a CSV")
-
-    print("Model Name received:", modelName)
 
     content = await file.read()
 
@@ -110,9 +113,8 @@ def home(request: Request):
     school_years = helper.generate_school_years()
     semesters = helper.generate_semesters()
     default_model_name = DEFAULT_TRAINED_MODEL_NAME
-    supported_classifiers = SUPPORTED_CLASSIFIERS
+    supported_classifiers = list(SUPPORTED_CLASSIFIERS.keys())
     default_classifier = DEFAULT_CLASSIFIER
-    print(f"supported_classifiers: {supported_classifiers}")
 
     return templates.TemplateResponse(
         "index.html",
