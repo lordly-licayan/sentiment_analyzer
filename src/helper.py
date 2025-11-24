@@ -1,12 +1,9 @@
 from datetime import datetime
 import re
 import logging
-import os
-import joblib
 
 import pandas as pd
 from sentence_transformers import SentenceTransformer
-from model.classifier import create_SGD_classifier
 from src import EMBEDDER_MODEL, JOBS, TEST_DATA_PATH
 from uuid import uuid4
 
@@ -230,13 +227,3 @@ def remove_job(job_id):
     """
     if job_id in JOBS:
         del JOBS[job_id]
-
-
-def get_model(model_name: str):
-
-    model_path = os.path.join(os.getenv("MODEL_DIR"), model_name)
-    if os.path.exists(model_path):
-        clf = joblib.load(model_path)
-    else:
-        clf = create_SGD_classifier()
-    return clf

@@ -54,18 +54,13 @@
         <div
           style="display: flex; gap: 10px; align-items: center; margin: 10px"
         >
-          <label for="modelNameInput" style="min-width: 50px">Model Name</label>
+          <label style="min-width: 50px">Model Name</label>
           <input
             type="text"
             id="modelName"
             name="model_name"
             value="{{ default_model_name }}"
-            style="
-              flex: 1;
-              padding: 6px;
-              border: 1px solid #ccc;
-              border-radius: 4px;
-            "
+            class="text-input"
           />
         </div>
         <div id="dropzone" class="dropzone">
@@ -90,44 +85,26 @@
             <option value="{{ sem }}">{{ sem }}</option>
             {% endfor %}
           </select>
-
+          <label>Classifier Model:</label>
+          <select id="classifierModel">
+              {% for item in supported_classifiers %}
+                  <option 
+                      value="{{ item }}"
+                      {% if item == default_classifier %}selected{% endif %}
+                  >
+                      {{ item }}
+                  </option>
+              {% endfor %}
+          </select>
           <button id="trainBtn" onclick="train_model()">Train</button>
         </div>
         <!-- Progress Bar Section -->
-        <div id="progressContainer" style="display: none; margin-top: 20px">
-          <div
-            id="progressLabel"
-            style="font-size: 14px; margin-bottom: 6px; color: #333"
-          >
-            Initializing...
+        <div id="progressContainer">
+          <div id="progressLabel"> Initializing...</div>
+          <div id="progressBarContainer">
+            <div id="progressBar"></div>
           </div>
-
-          <div
-            style="
-              background: #e5e7eb;
-              height: 20px;
-              width: 100%;
-              border-radius: 8px;
-              overflow: hidden;
-            "
-          >
-            <div
-              id="progressBar"
-              style="
-                background: #10b981;
-                width: 0%;
-                height: 100%;
-                transition: width 0.25s ease;
-              "
-            ></div>
-          </div>
-
-          <div
-            id="progressPercent"
-            style="margin-top: 5px; font-size: 13px; color: #555"
-          >
-            0%
-          </div>
+          <div id="progressPercent"> 0% </div>
         </div>
         <div id="report-info">
           <p>Status: <span id="status"></span></p>

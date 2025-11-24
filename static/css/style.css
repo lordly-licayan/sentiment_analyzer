@@ -141,3 +141,47 @@ button:disabled {
   font-size: 14px;
   transition: 0.2s ease;
 }
+
+.text-input {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+#trainBtn {
+  font-size: 20px;
+  padding: 10px 20px;
+}
+
+#progressContainer {
+  display: none;
+  margin-top: 20px;
+}
+
+#progressBar {
+  background: #10b981;
+  width: 0%;
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+#progressBarContainer {
+  background: #e5e7eb;
+  height: 20px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#progressLabel {
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #0c0c0c;
+}
+
+#progressPercent {
+  margin-top: 5px;
+  font-size: 13px;
+  color: #555;
+}

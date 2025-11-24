@@ -1,68 +1,19 @@
-from fastapi import HTTPException
 import os
 import time
 import joblib
 import traceback
 import numpy as np
 import pandas as pd
-
-from sentence_transformers import SentenceTransformer
-from sklearn.linear_model import LogisticRegression, SGDClassifier
-from sklearn.metrics import classification_report, accuracy_score
-
 from io import StringIO
-
-import tqdm
-from model.classifier import create_SGD_classifier
-from src import JOBS, MODEL_PATH
+from src import JOBS, TRAINED_MODEL_DIR, DEFAULT_TRAINED_MODEL_NAME
 from src.helper import (
-    get_model,
     logger,
     process_data,
     get_embedder,
     convert_label_to_sentiment,
-    get_test_data,
-    remove_job,
     update_job,
 )
-
-
-def evaluate_model(model_path, csv_path):
-    import joblib
-    from sklearn.metrics import accuracy_score, classification_report
-    import pandas as pd
-
-    # Load model
-    clf = joblib.load(model_path)
-
-    # Load test dataset
-    df = pd.read_csv(csv_path)
-    comments = df["comment"].tolist()
-    labels = df["label"].tolist()
-
-    # Embeddings
-    embedder = get_embedder()
-    X = embedder.encode(comments, batch_size=64, show_progress_bar=True)
-
-    # Predict
-    y_pred = clf.predict(X)
-
-    # Metrics
-    acc = accuracy_score(labels, y_pred)
-    report = classification_report(labels, y_pred, output_dict=True)
-
-    return acc, report
-
-
-def get_embeddings(comments):
-    """
-    Get embeddings for a list of comments using the embedder model.
-    """
-    embedder = get_embedder()
-    embeddings = embedder.encode(
-        comments, batch_size=64, show_progress_bar=False, convert_to_numpy=True
-    )
-    return embeddings
+from src.model.sgd_classifier import get_model, train_sgd_classifier
 
 
 def perform_embedding(job_id, comments):
@@ -99,107 +50,39 @@ def perform_embedding(job_id, comments):
     return embeddings
 
 
-def calculate_epochs(n_samples: int) -> int:
+def perform_training(job_id, model_name, classifier_model, X_train, y_train):
     """
-    Automatically adjust number of epochs based on dataset size
+    Perform training using the specified classifier.
     """
-    if n_samples < 10000:
-        return 15
-    elif n_samples <= 50000:
-        return 20
-    elif n_samples <= 100000:
-        return 25
-    else:
-        return 10  # For very large datasets, use fewer epochs with partial_fit
+    clf = get_model(model_name)
+    report = train_sgd_classifier(job_id, clf, X_train, y_train)
+    return clf, report
 
 
-def train_SGDClassifier(job_id, clf, X_train, y_train, batch_size=64):
+def save_model(
+    job_id, clf, model_name=DEFAULT_TRAINED_MODEL_NAME, model_dir=TRAINED_MODEL_DIR
+):
     """
-    Train an SGDClassifier incrementally using partial_fit.
-
-    Args:
-        clf: An instance of SGDClassifier.
-        comments (list[str]): List of text comments.
-        labels (list): Corresponding labels for the comments.
-        batch_size (int): Size of each training batch.
+    Save the trained model to disk.
     """
+    model_path = os.path.join(model_dir, model_name)
+    joblib.dump(clf, model_path)
+    logger.info(f"Model saved to {model_path}")
+    print(f"JOBS: {JOBS}")
 
-    n_samples = X_train.shape[0]
-    epochs = calculate_epochs(n_samples)
-    classes = np.unique(y_train)  # full set of labels
-    logger.info(
-        f"Classes: {classes}  | Epochs: {epochs}  | Samples: {n_samples}  | Batch size: {batch_size}  "
-    )
     update_job(
         job_id,
-        status="Training",
-        message="Data count: {n_samples}, Epochs: {epochs}.",
+        status="Saving",
+        message=f"Trained model {model_name} saved.",
     )
-
-    # ------------------------------------------------
-    # 4. Training Loop (REAL-TIME PROGRESS)
-    # ------------------------------------------------
-
-    # Early stopping variables
-    best_acc = 0
-    wait = 0
-    patience = int(os.getenv("PATIENCE"))
-
-    for epoch in range(epochs):
-
-        # Shuffle each epoch
-        indices = np.random.permutation(n_samples)
-        X_epoch = X_train[indices]
-        y_epoch = y_train[indices]
-
-        # partial_fit = 1 epoch of SGD
-        clf.partial_fit(X_epoch, y_epoch, classes=classes)
-
-        # Evaluate on this batch
-        y_pred = clf.predict(X_train)
-        acc = accuracy_score(y_train, y_pred)
-        progress = int((epoch + 1) / epochs * 100)
-
-        logger.info(
-            f"[Epoch {epoch+1}/{epochs}] Progress: {progress}% | Accuracy: {acc:.4f}"
-        )
-
-        # Early stopping
-        if acc > best_acc:
-            best_acc = acc
-            wait = 0
-        else:
-            wait += 1
-        if wait >= patience:
-            print("⏹ Early stopping triggered")
-            break
-
-        update_job(
-            job_id,
-            progress=f"{progress}%",
-            accuracy=f"{acc * 100:.2f}%",
-            message=f"Training epoch {epoch+1}/{epochs}.",
-        )
-        print(JOBS[job_id])
-
-    # Final report
-    report = classification_report(y_train, y_pred, output_dict=True)
-    logger.info("Training complete!")
-    update_job(
-        job_id,
-        status="Complete",
-        progress="100%",
-        message="Training complete",
-        report=report,
-    )
-
-    return report
 
 
 # -----------------------------------------------------------
 # BACKGROUND TASK (TRAINING)
 # -----------------------------------------------------------
-def process_data_and_train(job_id: str, modelName: str, content: bytes):
+def process_data_and_train(
+    job_id: str, model_name: str, classifier_model: str, content: bytes
+):
     start_time = time.time()
     logger.info(f"[{job_id}] Background task started.")
 
@@ -243,18 +126,24 @@ def process_data_and_train(job_id: str, modelName: str, content: bytes):
         # Train model
         # ---------------------------------------
         logger.info(f"[{job_id}] Training model using SGDClassifier")
-        clf = get_model(modelName)
-        report = train_SGDClassifier(job_id, clf, X_train, y_train)
+        clf, report = perform_training(
+            job_id, model_name, classifier_model, X_train, y_train
+        )
         logger.info(f"[{job_id}] Report: {report}")
 
         # ---------------------------------------
         # Save model
         # ---------------------------------------
-        logger.info(f"[{job_id}] Saving model → {MODEL_PATH}")
-        joblib.dump(clf, MODEL_PATH)
+        save_model(job_id, clf, model_name)
 
         elapsed = time.time() - start_time
         logger.info(f"[{job_id}] Training completed in {elapsed:.2f} seconds")
+        update_job(
+            job_id,
+            status="Complete",
+            progress="100%",
+            message="Training and saving the trained model done.",
+        )
 
     except Exception as e:
         logger.error(f"[{job_id}] ERROR: {e}")

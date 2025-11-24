@@ -162,6 +162,7 @@ async function train_model() {
   formData.append("file", file); // CSV File
   formData.append("sy", schoolYearSelect.value); // School Year
   formData.append("semester", semesterSelect.value); // Semester
+  formData.append("classifierModel", classifierModel.value); // classifier Model
 
   startTraining(true);
   document.getElementById("report-info").style.display = "none";
