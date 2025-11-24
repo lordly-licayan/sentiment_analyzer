@@ -13,8 +13,10 @@ from sklearn.metrics import classification_report, accuracy_score
 from io import StringIO
 
 import tqdm
+from model.classifier import create_SGD_classifier
 from src import JOBS, MODEL_PATH
 from src.helper import (
+    get_model,
     logger,
     process_data,
     get_embedder,
@@ -23,25 +25,6 @@ from src.helper import (
     remove_job,
     update_job,
 )
-
-
-def create_SGD_classifier():
-    """
-    Create a SGDClassifier with predefined parameters.
-    """
-    clf = SGDClassifier(
-        loss="log_loss",
-        penalty="l2",
-        alpha=1e-4,
-        learning_rate="optimal",
-        eta0=0.001,
-        max_iter=1,
-        warm_start=True,
-        tol=None,
-        random_state=42,
-    )
-
-    return clf
 
 
 def evaluate_model(model_path, csv_path):
@@ -107,7 +90,7 @@ def perform_embedding(job_id, comments):
         update_job(
             job_id,
             progress=f"{progress}%",
-            message=f"Embedding batch {batch_idx + 1}/{total_batches}",
+            message=f"Embedding batch {batch_idx + 1}/{total_batches}.",
         )
 
     # Combine into single NumPy array
@@ -150,7 +133,7 @@ def train_SGDClassifier(job_id, clf, X_train, y_train, batch_size=64):
     update_job(
         job_id,
         status="Training",
-        message="Epochs: {epochs}, Data count: {n_samples}, Batch size: {batch_size}",
+        message="Data count: {n_samples}, Epochs: {epochs}.",
     )
 
     # ------------------------------------------------
@@ -195,7 +178,7 @@ def train_SGDClassifier(job_id, clf, X_train, y_train, batch_size=64):
             job_id,
             progress=f"{progress}%",
             accuracy=f"{acc * 100:.2f}%",
-            message=f"Training epoch {epoch+1}/{epochs}",
+            message=f"Training epoch {epoch+1}/{epochs}.",
         )
         print(JOBS[job_id])
 
@@ -216,7 +199,7 @@ def train_SGDClassifier(job_id, clf, X_train, y_train, batch_size=64):
 # -----------------------------------------------------------
 # BACKGROUND TASK (TRAINING)
 # -----------------------------------------------------------
-def process_data_and_train(job_id: str, content: bytes):
+def process_data_and_train(job_id: str, modelName: str, content: bytes):
     start_time = time.time()
     logger.info(f"[{job_id}] Background task started.")
 
@@ -235,11 +218,14 @@ def process_data_and_train(job_id: str, content: bytes):
 
         comments, labels, errors = process_data(df)
 
-        if errors:
-            logger.warning(f"[{job_id}] Found {len(errors)} rows with issues")
-            update_job(job_id, status="Error", message=f"{errors}")
+        if len(comments) == 0:
+            logger.info(f"[{job_id}] No valid data to train on.")
+            update_job(job_id, status="Complete", message="No valid data to train on.")
+            return
 
-            raise HTTPException(status_code=500, detail=f"{errors}")
+        if len(errors) > 0:
+            logger.info(f"[{job_id}] Data processing errors: {errors}")
+            update_job(job_id, feedback=f"{errors}")
 
         # ---------------------------------------
         # Embedding
@@ -257,7 +243,7 @@ def process_data_and_train(job_id: str, content: bytes):
         # Train model
         # ---------------------------------------
         logger.info(f"[{job_id}] Training model using SGDClassifier")
-        clf = create_SGD_classifier()
+        clf = get_model(modelName)
         report = train_SGDClassifier(job_id, clf, X_train, y_train)
         logger.info(f"[{job_id}] Report: {report}")
 
@@ -265,7 +251,7 @@ def process_data_and_train(job_id: str, content: bytes):
         # Save model
         # ---------------------------------------
         logger.info(f"[{job_id}] Saving model → {MODEL_PATH}")
-        joblib.dump({"clf": clf, "label_order": list(clf.classes_)}, MODEL_PATH)
+        joblib.dump(clf, MODEL_PATH)
 
         elapsed = time.time() - start_time
         logger.info(f"[{job_id}] Training completed in {elapsed:.2f} seconds")

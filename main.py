@@ -47,6 +47,7 @@ app.add_middleware(
 @app.post("/train_model")
 async def train_model(
     background: BackgroundTasks,
+    modelName: str = Form(...),
     file: UploadFile = File(...),
     sy: str = Form(...),
     semester: str = Form(...),
@@ -55,12 +56,14 @@ async def train_model(
         logger.warning("File rejected — not CSV")
         raise HTTPException(status_code=400, detail="Uploaded file must be a CSV")
 
+    print("Model Name received:", modelName)
+
     content = await file.read()
 
     job_id = create_job()
 
     logger.info(f"Created job {job_id} — queued for background processing")
-    background.add_task(process_data_and_train, job_id, content)
+    background.add_task(process_data_and_train, job_id, modelName, content)
 
     return {"job_id": job_id}
 
@@ -114,7 +117,7 @@ def home(request: Request):
     logger.info("Health check")
     school_years = helper.generate_school_years()
     semesters = helper.generate_semesters()
-    dataset_type = helper.generate_dataset_type()
+    default_model_name = os.getenv("MODEL_NAME")
 
     return templates.TemplateResponse(
         "index.html",
@@ -122,7 +125,7 @@ def home(request: Request):
             "request": request,
             "school_years": school_years,
             "semesters": semesters,
-            "dataset_type": dataset_type,
+            "default_model_name": default_model_name,
         },
     )
 

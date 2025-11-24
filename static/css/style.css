@@ -26,14 +26,14 @@ h2 {
 .tab {
   padding: 12px 20px;
   cursor: pointer;
-  background: #eaeaea;
+  background: white;
   margin-right: 5px;
   border-radius: 5px 5px 0 0;
   font-weight: bold;
 }
 
 .tab.active {
-  background: white;
+  background: #14b8a6; /* lively teal */
   border: 2px solid #ccc;
   border-bottom: none;
 }

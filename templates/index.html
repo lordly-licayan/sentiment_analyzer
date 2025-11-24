@@ -51,7 +51,23 @@
       <!-- TRAIN A MODEL TAB -->
       <div id="train_model" class="tab-content">
         <h2>Upload CSV for training a model</h2>
-
+        <div
+          style="display: flex; gap: 10px; align-items: center; margin: 10px"
+        >
+          <label for="modelNameInput" style="min-width: 50px">Model Name</label>
+          <input
+            type="text"
+            id="modelName"
+            name="model_name"
+            value="{{ default_model_name }}"
+            style="
+              flex: 1;
+              padding: 6px;
+              border: 1px solid #ccc;
+              border-radius: 4px;
+            "
+          />
+        </div>
         <div id="dropzone" class="dropzone">
           Drag & Drop CSV here<br /><br />
           or click to browse
@@ -118,6 +134,7 @@
           <p>Message: <span id="message"></span></p>
           <p>Accuracy: <span id="accuracy"></span></p>
           <p>Report: <span id="report"></span></p>
+          <p>Feedback: <span id="feedback"></span></p>
         </div>
       </div>
 

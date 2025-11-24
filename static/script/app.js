@@ -88,6 +88,7 @@ function pollTraining(job_id) {
         document.getElementById("report").innerText = JSON.stringify(
           data.report
         );
+        document.getElementById("feedback").innerText = data.feedback;
         startTraining(false);
         alert("Training completed!");
       }
@@ -119,6 +120,15 @@ function startTraining(enable) {
 }
 
 async function train_model() {
+  const modelName = document.getElementById("modelName").value.trim();
+
+  if (!isValidModelName(modelName)) {
+    alert(
+      "Invalid model name. Ensure it has no spaces and ends with .pkl extension."
+    );
+    return;
+  }
+
   const fileInput = document.getElementById("fileInput");
   const schoolYearSelect = document.getElementById("schoolYearSelect");
   const semesterSelect = document.getElementById("semesterSelect");
@@ -148,6 +158,7 @@ async function train_model() {
 
   // --- TRAINING MODEL ---
   const formData = new FormData();
+  formData.append("modelName", modelName); // Model Name
   formData.append("file", file); // CSV File
   formData.append("sy", schoolYearSelect.value); // School Year
   formData.append("semester", semesterSelect.value); // Semester
@@ -194,6 +205,22 @@ function viewComments(fileId) {
 function viewReport(fileId) {
   openTab("report");
   alert("Load training report via API for File ID: " + fileId);
+}
+
+function isValidModelName(filename) {
+  if (!filename) return false; // empty filename
+
+  // Check for spaces
+  if (filename.includes(" ")) {
+    return false;
+  }
+
+  // Check if it ends with .pkl (case-insensitive)
+  if (!filename.toLowerCase().endsWith(".pkl")) {
+    return false;
+  }
+
+  return true;
 }
 
 document.getElementById("report-info").style.display = "none";
