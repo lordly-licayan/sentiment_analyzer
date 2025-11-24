@@ -193,6 +193,7 @@ def create_job():
         "progress": "",
         "message": "Job created",
         "accuracy": "",
+        "elapsedTime": "",
         "errors": "",
         "report": "",
         "feedback": "",
@@ -224,3 +225,20 @@ def remove_job(job_id):
     """
     if job_id in JOBS:
         del JOBS[job_id]
+
+
+def format_seconds(total_seconds):
+    """
+    Convert seconds to a string in the format 'H hours : M minutes : S seconds'.
+
+    Args:
+        total_seconds (int): Number of seconds.
+
+    Returns:
+        str: Formatted string.
+    """
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+
+    return f"{hours} hours : {minutes} minutes : {seconds} seconds"

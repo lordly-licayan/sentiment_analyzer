@@ -13,6 +13,7 @@ from src import (
     DEFAULT_TRAINED_MODEL_NAME,
 )
 from src.helper import (
+    format_seconds,
     logger,
     process_data,
     get_embedder,
@@ -155,12 +156,13 @@ def process_data_and_train(
         # ---------------------------------------
         save_model(job_id, clf, classifier_model, model_name)
 
-        elapsed = time.time() - start_time
-        logger.info(f"[{job_id}] Training completed in {elapsed:.2f} seconds")
+        elapsedTime = format_seconds(time.time() - start_time)
+        logger.info(f"[{job_id}] Training completed in {elapsedTime}.")
         update_job(
             job_id,
             status="Complete",
             progress="100%",
+            elapsedTime=elapsedTime,
             message="Training and saving the trained model done.",
         )
 

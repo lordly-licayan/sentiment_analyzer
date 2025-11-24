@@ -1,7 +1,9 @@
 import os
 import joblib
 import numpy as np
+from sklearn.discriminant_analysis import StandardScaler
 from sklearn.linear_model import SGDClassifier
+from sklearn.model_selection import train_test_split
 from src import JOBS
 from src.helper import logger, update_job
 from sklearn.metrics import classification_report, accuracy_score
@@ -50,76 +52,94 @@ def calculate_epochs(n_samples: int) -> int:
         return 10  # For very large datasets, use fewer epochs with partial_fit
 
 
-def train_sgd_classifier(job_id, clf, X_train, y_train, batch_size=64):
+def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
     """
-    Train an SGDClassifier incrementally using partial_fit.
+    Train SGDClassifier with training/validation split and early stopping.
 
     Args:
-        clf: An instance of SGDClassifier.
-        comments (list[str]): List of text comments.
-        labels (list): Corresponding labels for the comments.
-        batch_size (int): Size of each training batch.
+        job_id: ID for logging
+        clf: SGDClassifier instance
+        X: Features (embeddings)
+        y: Labels
+        test_size: Fraction for validation
+
+    Returns:
+        report: Classification report on validation set
     """
 
-    n_samples = X_train.shape[0]
+    # Split into training and validation
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=test_size, random_state=42, stratify=y
+    )
+
+    # Scale embeddings
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_val_scaled = scaler.transform(X_val)
+
+    n_samples = X_train_scaled.shape[0]
     epochs = calculate_epochs(n_samples)
     classes = np.unique(y_train)  # full set of labels
-    logger.info(
-        f"Classes: {classes}  | Epochs: {epochs}  | Samples: {n_samples}  | Batch size: {batch_size}  "
-    )
+
+    logger.info(f"Job {job_id}: Starting training for {epochs} epochs")
     update_job(
         job_id,
         status="Training",
-        message="Data count: {n_samples}, Epochs: {epochs}.",
+        message="Starting training for {epochs} epochs.",
     )
 
     # Early stopping variables
     best_acc = 0
     wait = 0
-    patience = int(os.getenv("PATIENCE"))
+    patience = int(os.getenv("PATIENCE", 5))  # default 5 if not set
 
     for epoch in range(epochs):
 
-        # Shuffle each epoch
+        # Shuffle training data each epoch
         indices = np.random.permutation(n_samples)
-        X_epoch = X_train[indices]
+        X_epoch = X_train_scaled[indices]
         y_epoch = y_train[indices]
 
-        # partial_fit = 1 epoch of SGD
+        # Train 1 epoch
         clf.partial_fit(X_epoch, y_epoch, classes=classes)
 
-        # Evaluate on this batch
-        y_pred = clf.predict(X_train)
-        acc = accuracy_score(y_train, y_pred)
+        # Evaluate on validation set
+        y_val_pred = clf.predict(X_val_scaled)
+        acc = accuracy_score(y_val, y_val_pred)
         progress = int((epoch + 1) / epochs * 100)
-
         logger.info(
-            f"[Epoch {epoch+1}/{epochs}] Progress: {progress}% | Accuracy: {acc:.4f}"
+            f"Epoch {epoch+1}/{epochs} - Val Accuracy: {acc:.4f} - Progress: {progress}%"
         )
-
+        update_job(
+            job_id,
+            message=f"Epoch {epoch+1}/{epochs} - Accuracy: {acc * 100:.2f}% - Progress: {progress}%",
+        )
         # Early stopping
         if acc > best_acc:
             best_acc = acc
             wait = 0
         else:
             wait += 1
+
         if wait >= patience:
             logger.warning("⏹ Early stopping triggered")
             break
 
-        update_job(
-            job_id,
-            progress=f"{progress}%",
-            accuracy=f"{acc * 100:.2f}%",
-            message=f"Training epoch {epoch+1}/{epochs}.",
-        )
+        # update_job(
+        #     job_id,
+        #     progress=f"{progress}%",
+        #     accuracy=f"{acc * 100:.2f}%",
+        #     message=f"Training epoch {epoch+1}/{epochs}.",
+        # )
+    # Final evaluation on validation set
+    report = classification_report(y_val, y_val_pred, output_dict=True)
+    logger.info(f"Training completed. Best Val Accuracy: {best_acc:.4f}")
 
-    # Final report
-    report = classification_report(y_train, y_pred, output_dict=True)
-    logger.info("Training complete!")
     update_job(
         job_id,
         status="Complete",
+        progress=f"{progress}%",
+        accuracy=f"{acc * 100:.2f}%",
         message="Training complete.",
         report=report,
     )

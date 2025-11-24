@@ -85,6 +85,7 @@ function pollTraining(job_id) {
         document.getElementById("report-info").style.display = "block";
         document.getElementById("message").innerText = data.message;
         document.getElementById("accuracy").innerText = data.accuracy;
+        document.getElementById("elapsedTime").innerText = data.elapsedTime;
         document.getElementById("report").innerText = JSON.stringify(
           data.report
         );
