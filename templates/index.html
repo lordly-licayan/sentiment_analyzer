@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Sentiment Training Dashboard</title>
+    <title>Model Training Dashboard</title>
     <link
       rel="stylesheet"
       href="{{ url_for('static', path='/css/style.css') }}"
@@ -35,15 +35,17 @@
               <th>Remarks</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="models-tbody">
             {% for m in models %}
             <tr>
-              <td>{{ m.SY }}</td>
-              <td>{{ m.Semester }}</td>
-              <td>{{ m.ModelName }}</td>
-              <td>{{ m.Location }}</td>
-              <td>{{ m.NoOfData }}</td>
-              <td>{{ m.TrainedDate }}</td>
+              <td>{{ m.sy }}</td>
+              <td>{{ m.semester }}</td>
+              <td>{{ m.model_name }}</td>
+              <td>{{ m.classifier }}</td>
+              <td>{{ m.accuracy }}%</td>
+              <td>{{ m.no_of_data }}</td>
+              <td>{{ m.date_trained }}</td>
+              <td>{{ m.remarks }}</td>
             </tr>
             {% endfor %}
           </tbody>

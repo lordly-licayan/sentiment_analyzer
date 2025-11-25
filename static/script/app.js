@@ -1,5 +1,5 @@
 /* ----- TAB SWITCHING ----- */
-function openTab(tabId) {
+async function openTab(tabId) {
   document
     .querySelectorAll(".tab")
     .forEach((t) => t.classList.remove("active"));
@@ -9,6 +9,52 @@ function openTab(tabId) {
 
   event.target.classList.add("active");
   document.getElementById(tabId).classList.add("active");
+
+  if (tabId === "models") {
+    await loadTrainedModels();
+  }
+
+  if (tabId === "comments") {
+    await loadComments();
+  }
+}
+
+/* ----- DISPLAYING TRAINED MODELS ----- */
+async function loadTrainedModels() {
+  const tbody = document.getElementById("models-tbody");
+  tbody.innerHTML = `<tr><td colspan="8">Loading...</td></tr>`;
+
+  try {
+    const res = await fetch("/trained-models");
+    if (!res.ok) throw new Error("Failed to fetch");
+
+    const models = await res.json();
+
+    if (models.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8">No trained models found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = ""; // Clear old rows
+
+    models.forEach((m) => {
+      tbody.innerHTML += `
+                <tr>
+                    <td>${m.sy}</td>
+                    <td>${m.semester}</td>
+                    <td>${m.model_name}</td>
+                    <td>${m.classifier}</td>
+                    <td>${m.accuracy}%</td>
+                    <td>${m.no_of_data}</td>
+                    <td>${m.date_trained}</td>
+                    <td>${m.remarks}</td>
+                </tr>
+            `;
+    });
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="8">Error loading models.</td></tr>`;
+  }
 }
 
 /* ----- CSV UPLOAD HANDLING ----- */
@@ -199,6 +245,7 @@ async function train_model() {
 /* ----- VIEW BUTTONS (PLACEHOLDER) ----- */
 function viewComments(fileId) {
   openTab("comments");
+
   alert("Load comments via API for File ID: " + fileId);
 }
 

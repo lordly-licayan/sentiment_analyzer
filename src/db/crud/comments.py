@@ -16,6 +16,10 @@ def create_comments(db: Session, comments: list[schemas.CommentCreate]):
     db.commit()
 
 
+def list_all_comments(db: Session):
+    return db.query(models.Comments).distinct(models.Comments.comment).all()
+
+
 def list_comments_by_file(db: Session, file_id: str):
     return db.query(models.Comments).filter(models.Comments.file_id == file_id).all()
 

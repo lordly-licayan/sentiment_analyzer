@@ -67,8 +67,9 @@ def process_data(df: pd.DataFrame):
     if "comment" not in df.columns or "label" not in df.columns:
         raise ValueError("CSV must contain 'comment' and 'label' columns.")
 
-    comments = []
-    labels = []
+    # comments = []
+    # labels = []
+    data = {}
     errors = []
 
     # --- Process rows one-by-one ---
@@ -121,16 +122,29 @@ def process_data(df: pd.DataFrame):
         comment = normalize(comment)
 
         # --- Store valid row ---
-        comments.append(comment)
-        labels.append(label)
+        data[comment] = label
+        # comments.append(comment)
+        # labels.append(label)
 
     # If absolutely no valid rows exist, raise an error
-    if len(comments) == 0:
+    if len(data) == 0:
         raise ValueError(
             "All rows contain errors. No valid data to process.\n" + "\n".join(errors)
         )
 
-    return comments, labels, errors
+    return data, errors
+
+
+def dict_to_lists(data: dict):
+    """
+    Docstring for dict_to_lists
+
+    :param data: Description
+    :type data: dict
+    """
+    comments = list(data.keys())
+    labels = list(data.values())
+    return comments, labels
 
 
 def convert_label_to_sentiment(labels: list, label_map=LABEL_MAP):
@@ -178,14 +192,6 @@ def get_embedder(model_name=EMBEDDER_MODEL):
     logger.info("Loading embedder model: {model_name}")
     embedder = SentenceTransformer(model_name)
     return embedder
-
-
-def get_test_data(df: pd.DataFrame = None):
-    if df is None:
-        df = read_data(TEST_DATA_PATH)
-
-    comments, labels, errors = process_data(df)
-    return comments, labels, errors
 
 
 def generate_school_years():

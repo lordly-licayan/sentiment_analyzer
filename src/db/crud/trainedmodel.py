@@ -21,6 +21,14 @@ def get_trained_model(db: Session, model_id: int):
     )
 
 
+def get_trained_model_name(db: Session, model_name: int):
+    return (
+        db.query(models.TrainedModel)
+        .filter(models.TrainedModel.model_name == model_name)
+        .first()
+    )
+
+
 def update_trained_model(
     db: Session, model_id: int, update: schemas.TrainedModelCreate
 ):

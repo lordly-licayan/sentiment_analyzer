@@ -30,6 +30,9 @@ class Comments(Base):
     # Relationship → comment belongs to file
     file = relationship("FileInfo", back_populates="comments")
 
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 class TrainedModel(Base):
     __tablename__ = "trainedmodeltbl"
@@ -43,3 +46,12 @@ class TrainedModel(Base):
     no_of_data = Column(Integer, nullable=False)
     date_trained = Column(DateTime(timezone=True), server_default=func.now())
     remarks = Column(String(255), nullable=True)
+
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+        # Format datetime → readable string
+        if d.get("date_trained"):
+            d["date_trained"] = d["date_trained"].strftime("%Y-%m-%d %H:%M:%S")
+
+        return d

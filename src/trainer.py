@@ -8,12 +8,17 @@ from sqlalchemy.orm import Session
 from src import (
     DEFAULT_CLASSIFIER,
     JOBS,
+    LOGISTIC_REGRESSION_MODEL,
+    SGD_CLASSIFIER_MODEL,
 )
 
 
+from src.db.crud.comments import list_all_comments
 from src.db.crud.fileinfo import get_fileinfo
+from src.db.crud.trainedmodel import get_trained_model_name
 from src.db.schemas import TrainModelForm
 from src.helper import (
+    dict_to_lists,
     format_seconds,
     get_file_hash,
     logger,
@@ -127,6 +132,18 @@ def process_data_and_train(
             message="Decoding CSV and processing data...",
         )
 
+        existing_model = get_trained_model_name(db, data.modelName)
+        no_of_trained_data = 0
+
+        if data.classifierModel == LOGISTIC_REGRESSION_MODEL:
+            if existing_model:
+                update_job(
+                    job_id,
+                    status="Error",
+                    message=f"Model name {data.modelName} already exists.",
+                )
+                return
+
         logger.info(f"[{job_id}] Decoding CSV bytes")
 
         s = file_content.decode("utf-8", errors="ignore")
@@ -140,15 +157,17 @@ def process_data_and_train(
             update_job(
                 job_id,
                 status="Error",
-                message="File {filename} already used for training. You can delete the file for retraining.",
+                message=f"File {filename} already used for training. You can delete the file for retraining.",
             )
             return
 
-        comments, labels, errors = process_data(df)
-        sentiments = convert_label_to_sentiment(labels)
-        no_of_data = len(comments)
+        # comments, labels, errors = process_data(df)
+        result, errors = process_data(df)
+        new_comments, new_labels = dict_to_lists(result)
+        no_of_new_comments = len(new_comments)
+        logger.info(f"no. of new comments: {no_of_new_comments}")
 
-        if no_of_data == 0:
+        if no_of_new_comments == 0:
             logger.info(f"[{job_id}] No valid data to train on.")
             update_job(job_id, status="Complete", message="No valid data to train on.")
             return
@@ -157,16 +176,38 @@ def process_data_and_train(
             logger.info(f"[{job_id}] Data processing errors: {errors}")
             update_job(job_id, feedback=f"{errors}")
 
+        # retrieve comments from the database
+        retrieved_comments = list_all_comments(db)
+
+        # combine retrieved comments and the new comments
+        combined_comments = result | {m.comment: m.label for m in retrieved_comments}
+        all_comments, all_labels = dict_to_lists(combined_comments)
+
+        # get the equivalent sentiments for the labels
+        sentiments = convert_label_to_sentiment(all_labels)
+
+        no_of_trained_data = len(all_comments)
+        logger.info(f"no_of_trained_data: {no_of_trained_data}")
+
+        # retrieve all comments from the database if logistic regression is used.
+        # if data.classifierModel == LOGISTIC_REGRESSION_MODEL:
+        #     retrieved_comments = list_all_comments(db)
+        #     all_comments = comments + [m.to_dict() for m in retrieved_comments]
+        #     no_of_trained_data = len(all_comments)
+        # elif data.classifierModel == SGD_CLASSIFIER_MODEL:
+        #     if existing_model:
+        #         no_of_trained_data = existing_model.no_of_data + no_of_comments
+
         # ---------------------------------------
         # Embedding
         # ---------------------------------------
-        logger.info(f"[{job_id}] Embedding {len(comments)} comments")
+        logger.info(f"[{job_id}] Embedding {no_of_trained_data} comments.")
         update_job(
             job_id,
             status="Embedding",
             message="Embedding the dataset started...",
         )
-        X_train = perform_embedding(job_id, comments)
+        X_train = perform_embedding(job_id, all_comments)
         y_train = np.array(sentiments)
 
         # ---------------------------------------
@@ -181,12 +222,16 @@ def process_data_and_train(
         # ---------------------------------------
         # Save model and other information
         # ---------------------------------------
-        save_file_info(db, file_id, filename, no_of_data, errors)
+        save_file_info(db, file_id, filename, no_of_new_comments, errors)
 
-        save_comments(db, file_id, comments, labels, sentiments)
+        save_comments(db, file_id, new_comments, new_labels, sentiments)
 
-        remarks = "Model is trained by {data.classifierName} with {accuracy} accuracy."
-        save_trained_model(db, clf, data, accuracy, no_of_data, remarks)
+        remarks = (
+            f"Model is trained by {data.classifierModel} with {accuracy}% accuracy."
+        )
+        save_trained_model(
+            db, clf, data, round(accuracy, 2), no_of_trained_data, remarks
+        )
 
         elapsedTime = format_seconds(time.time() - start_time)
         logger.info(f"[{job_id}] Training completed in {elapsedTime}.")

@@ -22,6 +22,7 @@ from src import (
     LABEL_MAP,
     SUPPORTED_CLASSIFIERS,
 )
+from src.db.crud.trainedmodel import list_trained_models
 from src.db.database import get_db
 from src.db.schemas import TrainModelForm, TrainModelFormDependency
 from src.helper import create_job, get_file_hash, logger
@@ -132,13 +133,15 @@ def job_status(job_id: str):
 #     return {"comment": text, "prediction": pred, "probs": probs}
 
 
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request):
+def get_display(request: Request, db: Session):
     school_years = helper.generate_school_years()
     semesters = helper.generate_semesters()
     default_model_name = DEFAULT_TRAINED_MODEL_NAME
     supported_classifiers = list(SUPPORTED_CLASSIFIERS.keys())
     default_classifier = DEFAULT_CLASSIFIER
+
+    trained_models = list_trained_models(db)
+    models = [m.to_dict() for m in trained_models]
 
     return templates.TemplateResponse(
         "index.html",
@@ -149,6 +152,39 @@ def home(request: Request):
             "default_model_name": default_model_name,
             "supported_classifiers": supported_classifiers,
             "default_classifier": default_classifier,
+            "models": models,
+        },
+    )
+
+
+@app.get("/trained-models")
+def get_latest_models(db: Session = Depends(get_db)):
+    trained_models = list_trained_models(db)
+    models = [m.to_dict() for m in trained_models]
+    return models
+
+
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request, db: Session = Depends(get_db)):
+    school_years = helper.generate_school_years()
+    semesters = helper.generate_semesters()
+    default_model_name = DEFAULT_TRAINED_MODEL_NAME
+    supported_classifiers = list(SUPPORTED_CLASSIFIERS.keys())
+    default_classifier = DEFAULT_CLASSIFIER
+
+    trained_models = list_trained_models(db)
+    models = [m.to_dict() for m in trained_models]
+
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "school_years": school_years,
+            "semesters": semesters,
+            "default_model_name": default_model_name,
+            "supported_classifiers": supported_classifiers,
+            "default_classifier": default_classifier,
+            "models": models,
         },
     )
 
