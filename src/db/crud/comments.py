@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 
 
-def create_comment(db: Session, comment: schemas.CommentsCreate):
+def create_comment(db: Session, comment: schemas.CommentCreate):
     db_comment = models.Comments(**comment.dict())
     db.add(db_comment)
     db.commit()
@@ -11,15 +11,20 @@ def create_comment(db: Session, comment: schemas.CommentsCreate):
     return db_comment
 
 
+def create_comments(db: Session, comments: list[schemas.CommentCreate]):
+    db.bulk_insert_mappings(models.Comments, [comment.dict() for comment in comments])
+    db.commit()
+
+
 def list_comments_by_file(db: Session, file_id: str):
-    return db.query(models.Comments).filter(models.Comments.FileId == file_id).all()
+    return db.query(models.Comments).filter(models.Comments.file_id == file_id).all()
 
 
 def get_comment(db: Session, comment_id: int):
-    return db.query(models.Comments).filter(models.Comments.Id == comment_id).first()
+    return db.query(models.Comments).filter(models.Comments.id == comment_id).first()
 
 
-def update_comment(db: Session, comment_id: int, update: schemas.CommentsBase):
+def update_comment(db: Session, comment_id: int, update: schemas.CommentCreate):
     db_comment = get_comment(db, comment_id)
     if not db_comment:
         return None

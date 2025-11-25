@@ -11,7 +11,7 @@ def create_fileinfo(db: Session, file: schemas.FileInfoCreate):
 
 
 def get_fileinfo(db: Session, file_id: str):
-    return db.query(models.FileInfo).filter(models.FileInfo.FileId == file_id).first()
+    return db.query(models.FileInfo).filter(models.FileInfo.file_id == file_id).first()
 
 
 def list_fileinfo(db: Session):

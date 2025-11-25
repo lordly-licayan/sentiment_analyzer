@@ -32,6 +32,7 @@
               <th>Accuracy</th>
               <th>No. Of Data</th>
               <th>Date Trained</th>
+              <th>Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -124,27 +125,30 @@
         <table>
           <thead>
             <tr>
-              <th>Data Type</th>
               <th>Filename</th>
-              <th>Hash</th>
               <th>No Of Data</th>
               <th>Date Uploaded</th>
-              <th>Actions</th>
+              <th>Remarks</th>
             </tr>
           </thead>
           <tbody>
             {% for f in uploaded_files %}
             <tr>
-              <td>{{ f.DataType }}</td>
               <td>{{ f.Filename }}</td>
-              <td>{{ f.Hash }}</td>
               <td>{{ f.NoOfData }}</td>
               <td>{{ f.DateUploaded }}</td>
+              <td>{{ f.Remarks }}</td>       
               <td>
-                <button class="btn btn-view" onclick="viewComments({{ f.Id }})">
+                <!-- <button class="btn btn-view" onclick="viewComments({{ f.Id }})">
                   Comments
                 </button>
                 <button class="btn btn-report" onclick="viewReport({{ f.Id }})">
+                  Report
+                </button> -->
+                <button class="btn btn-view" >
+                  Comments
+                </button>
+                <button class="btn btn-report" >
                   Report
                 </button>
               </td>

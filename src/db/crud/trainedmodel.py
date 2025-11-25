@@ -17,7 +17,7 @@ def list_trained_models(db: Session):
 
 def get_trained_model(db: Session, model_id: int):
     return (
-        db.query(models.TrainedModel).filter(models.TrainedModel.Id == model_id).first()
+        db.query(models.TrainedModel).filter(models.TrainedModel.id == model_id).first()
     )
 
 

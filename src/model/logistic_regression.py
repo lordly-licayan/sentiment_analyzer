@@ -62,6 +62,7 @@ def train_logistic_regression(
     y_val_pred = clf.predict(X_val_scaled)
     val_report = classification_report(y_val, y_val_pred, output_dict=True)
     val_acc = accuracy_score(y_val, y_val_pred)
+    accuracy = val_acc * 100
 
     report = {
         "trained_report": train_report,
@@ -76,8 +77,8 @@ def train_logistic_regression(
         job_id,
         status="Complete",
         progress="100%",
-        accuracy=f"{val_acc * 100:.2f}%",
+        accuracy=f"{accuracy:.2f}%",
         message="Training complete.",
         report=report,
     )
-    return report
+    return report, accuracy

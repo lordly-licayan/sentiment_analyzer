@@ -1,13 +1,28 @@
 import base64
 from datetime import datetime
 import hashlib
+import os
 import re
 import logging
 
+import joblib
 import pandas as pd
 from sentence_transformers import SentenceTransformer
-from src import EMBEDDER_MODEL, JOBS, LABEL_MAP, TEST_DATA_PATH
+from src import (
+    EMBEDDER_MODEL,
+    JOBS,
+    LABEL_MAP,
+    SUPPORTED_CLASSIFIERS,
+    TEST_DATA_PATH,
+    TRAINED_MODEL_DIR,
+)
 from uuid import uuid4
+
+
+from src.db.crud.comments import create_comments
+from src.db.crud.fileinfo import create_fileinfo
+from src.db.crud.trainedmodel import create_trained_model
+from src.db.schemas import CommentBase, FileInfoBase, TrainModelForm, TrainedModelBase
 
 # -----------------------------------------------------------
 # LOGGING CONFIGURATION
@@ -243,10 +258,64 @@ def format_seconds(total_seconds):
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
 
-    return f"{hours} hours : {minutes} minutes : {seconds:.2f} seconds"
+    return f"{hours:.0f}:{minutes:.0f}:{seconds:.0f}"
 
 
 def get_file_hash(content):
     sha256_hash = hashlib.sha256(content).digest()
     file_hash = base64.urlsafe_b64encode(sha256_hash).decode("utf-8").rstrip("=")
     return file_hash
+
+
+def save_file_info(db, file_id, filename, no_of_data, errors):
+    file_info = FileInfoBase(
+        file_id=file_id,
+        filename=filename,
+        no_of_data=no_of_data,
+        feedback=str(errors),
+    )
+    create_fileinfo(db, file_info)
+
+
+def save_comments(db, file_id, comments, labels, sentiments):
+    data = []
+
+    for comment, label, sentiment in zip(comments, labels, sentiments):
+        data.append(
+            CommentBase(
+                file_id=file_id, comment=comment, label=label, remarks=sentiment
+            )
+        )
+
+    create_comments(db, data)
+
+
+def save_trained_model(
+    db,
+    clf,
+    data: TrainModelForm,
+    accuracy,
+    no_of_data,
+    remarks,
+    model_dir=TRAINED_MODEL_DIR,
+):
+    """
+    Save the trained model to Google Cloud.
+    """
+    ext = SUPPORTED_CLASSIFIERS.get(data.classifierModel)
+
+    model_path = os.path.join(model_dir, f"{data.modelName}.{ext}")
+    joblib.dump(clf, model_path)
+    logger.info(f"Model saved to {model_path}")
+
+    trained_model = TrainedModelBase(
+        sy=data.sy,
+        semester=data.semester,
+        model_name=data.modelName,
+        classifier=data.classifierModel,
+        accuracy=accuracy,
+        no_of_data=no_of_data,
+        remarks=remarks,
+    )
+
+    create_trained_model(db, trained_model)

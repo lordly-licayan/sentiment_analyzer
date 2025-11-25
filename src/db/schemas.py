@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
-from typing import Optional, List
-from fastapi import Form, Depends
+from typing import Optional
+from fastapi import Form
 
 
 # ---------------------

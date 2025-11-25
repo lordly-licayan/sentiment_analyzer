@@ -110,10 +110,14 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
         logger.info(
             f"Epoch {epoch+1}/{epochs} - Val Accuracy: {acc:.4f} - Progress: {progress}%"
         )
+
         update_job(
             job_id,
-            message=f"Epoch {epoch+1}/{epochs} - Accuracy: {acc * 100:.2f}% - Progress: {progress}%",
+            progress=f"{progress}%",
+            accuracy=f"{acc * 100:.2f}%",
+            message=f"Training epoch {epoch+1}/{epochs}.",
         )
+
         # Early stopping
         if acc > best_acc:
             best_acc = acc
@@ -125,23 +129,18 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
             logger.warning("⏹ Early stopping triggered")
             break
 
-        # update_job(
-        #     job_id,
-        #     progress=f"{progress}%",
-        #     accuracy=f"{acc * 100:.2f}%",
-        #     message=f"Training epoch {epoch+1}/{epochs}.",
-        # )
     # Final evaluation on validation set
     report = classification_report(y_val, y_val_pred, output_dict=True)
+    accuracy = acc * 100
     logger.info(f"Training completed. Best Val Accuracy: {best_acc:.4f}")
 
     update_job(
         job_id,
         status="Complete",
         progress=f"{progress}%",
-        accuracy=f"{acc * 100:.2f}%",
+        accuracy=f"{accuracy:.2f}%",
         message="Training complete.",
         report=report,
     )
 
-    return report
+    return report, accuracy

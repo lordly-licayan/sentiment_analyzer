@@ -91,7 +91,7 @@ function pollTraining(job_id) {
         );
         document.getElementById("feedback").innerText = data.feedback;
         startTraining(false);
-        alert("Training completed!");
+        // alert("Training completed!");
       }
 
       if (data.status?.startsWith("Error")) {

@@ -1,5 +1,4 @@
 import os
-from fastapi.params import Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -24,8 +23,7 @@ from src import (
     SUPPORTED_CLASSIFIERS,
 )
 from src.db.database import get_db
-from src.db.models import FileInfo
-from src.db.schemas import FileInfoCreate, TrainModelForm, TrainModelFormDependency
+from src.db.schemas import TrainModelForm, TrainModelFormDependency
 from src.helper import create_job, get_file_hash, logger
 import src.helper as helper
 
@@ -59,21 +57,35 @@ async def train_model(
     form_data: TrainModelForm = Depends(TrainModelFormDependency),
     db: Session = Depends(get_db),
 ):
-    if not file.filename.endswith(".csv"):
-        logger.warning("File rejected — not CSV")
-        raise HTTPException(status_code=400, detail="Uploaded file must be a CSV")
+    try:
+        # Validate file extension
+        if not file.filename.endswith(".csv"):
+            logger.warning("File rejected — not CSV")
+            raise HTTPException(status_code=400, detail="Uploaded file must be a CSV")
 
-    filename = file.filename
-    file_content = await file.read()
+        filename = file.filename
 
-    job_id = create_job()
+        try:
+            file_content = await file.read()
+        except Exception as e:
+            logger.error(f"Failed to read uploaded file: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Error reading uploaded file: {e}"
+            )
 
-    logger.info(f"Created job {job_id} — queued for background processing")
-    background.add_task(
-        process_data_and_train, job_id, filename, file_content, form_data, db
-    )
+        job_id = create_job()
+        logger.info(f"Created job {job_id} — queued for background processing")
 
-    return {"job_id": job_id}
+        background.add_task(
+            process_data_and_train, job_id, filename, file_content, form_data, db
+        )
+
+        return {"job_id": job_id}
+
+    except Exception as e:
+        # Catch-all fallback to avoid unhandled errors
+        logger.error(f"Unexpected train_model error: {e}")
+        raise HTTPException(status_code=500, detail="Unexpected server error occurred")
 
 
 @app.get("/training-status/{job_id}")
