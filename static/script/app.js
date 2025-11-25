@@ -1,26 +1,63 @@
 /* ----- TAB SWITCHING ----- */
-async function openTab(tabId) {
+// async function openTab(tabId) {
+//   document
+//     .querySelectorAll(".tab")
+//     .forEach((t) => t.classList.remove("active"));
+//   document
+//     .querySelectorAll(".tab-content")
+//     .forEach((c) => c.classList.remove("active"));
+
+//   event.target.classList.add("active");
+//   document.getElementById(tabId).classList.add("active");
+
+//   if (tabId === "models") {
+//     await viewTrainedModels();
+//   }
+
+//   if (tabId === "uploaded_files") {
+//     await viewUploadedFiles();
+//   }
+
+//   if (tabId === "comments") {
+//     await viewComments();
+//   }
+// }
+
+async function openTab(tabId, id = null) {
   document
     .querySelectorAll(".tab")
-    .forEach((t) => t.classList.remove("active"));
-  document
-    .querySelectorAll(".tab-content")
-    .forEach((c) => c.classList.remove("active"));
+    .forEach((tab) => tab.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach((content) => {
+    content.style.display = "none";
+    content.classList.remove("active");
+  });
 
-  event.target.classList.add("active");
-  document.getElementById(tabId).classList.add("active");
+  // Activate tab header
+  const header = document.querySelector(`.tab[onclick="openTab('${tabId}')"]`);
+  if (header) header.classList.add("active");
+
+  // Show content
+  const content = document.getElementById(tabId);
+  if (content) {
+    content.style.display = "block";
+    content.classList.add("active");
+  }
 
   if (tabId === "models") {
-    await loadTrainedModels();
+    await viewTrainedModels();
+  }
+
+  if (tabId === "uploaded_files") {
+    await viewUploadedFiles();
   }
 
   if (tabId === "comments") {
-    await loadComments();
+    await viewComments(id);
   }
 }
 
 /* ----- DISPLAYING TRAINED MODELS ----- */
-async function loadTrainedModels() {
+async function viewTrainedModels() {
   const tbody = document.getElementById("models-tbody");
   tbody.innerHTML = `<tr><td colspan="8">Loading...</td></tr>`;
 
@@ -137,7 +174,6 @@ function pollTraining(job_id) {
         );
         document.getElementById("feedback").innerText = data.feedback;
         startTraining(false);
-        // alert("Training completed!");
       }
 
       if (data.status?.startsWith("Error")) {
@@ -242,16 +278,89 @@ async function train_model() {
   }
 }
 
-/* ----- VIEW BUTTONS (PLACEHOLDER) ----- */
-function viewComments(fileId) {
-  openTab("comments");
+/* ----- UPLOADED FILES ----- */
+async function viewUploadedFiles() {
+  const tbody = document.getElementById("uploaded-files-tbody");
+  tbody.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
 
-  alert("Load comments via API for File ID: " + fileId);
+  try {
+    const res = await fetch("/uploaded-files");
+    if (!res.ok) throw new Error("Failed to fetch /uploaded-files");
+
+    const result = await res.json();
+
+    if (result.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5">No uploaded files found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = ""; // Clear table
+
+    result.forEach((m) => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${m.filename}</td>
+          <td>${m.no_of_data}</td>
+          <td>${m.date_uploaded}</td>
+          <td>${m.remarks ?? ""}</td>
+          <td>
+            <button class="btn btn-view" onclick="openCommentsTab('${
+              m.file_id
+            }')">
+            Comments
+          </button>
+          </td>
+        </tr>
+      `;
+    });
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="5">Error loading uploaded files.</td></tr>`;
+  }
 }
 
-function viewReport(fileId) {
-  openTab("report");
-  alert("Load training report via API for File ID: " + fileId);
+/* ----- VIEW COMMENTS ----- */
+async function openCommentsTab(file_id) {
+  openTab("comments", file_id);
+}
+
+async function viewComments(file_id = null) {
+  const tbody = document.getElementById("comments-tbody");
+  tbody.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
+
+  try {
+    let res;
+
+    if (file_id) {
+      res = await fetch(`/comments?file_id=${file_id}`);
+    } else {
+      res = await fetch("/comments");
+    }
+
+    if (!res.ok) throw new Error("Failed to fetch /comments");
+
+    const result = await res.json();
+
+    if (result.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5">No comments found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = ""; // Clear table
+
+    result.forEach((m) => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${m.comment}</td>
+          <td>${m.label}</td>
+          <td>${m.remarks ?? ""}</td>
+        </tr>
+      `;
+    });
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="5">Error loading comments.</td></tr>`;
+  }
 }
 
 function isValidModelName(filename) {

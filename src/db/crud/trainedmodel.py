@@ -12,7 +12,11 @@ def create_trained_model(db: Session, model: schemas.TrainedModelCreate):
 
 
 def list_trained_models(db: Session):
-    return db.query(models.TrainedModel).all()
+    return (
+        db.query(models.TrainedModel)
+        .order_by(models.TrainedModel.date_trained.desc())
+        .all()
+    )
 
 
 def get_trained_model(db: Session, model_id: int):

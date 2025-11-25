@@ -14,9 +14,9 @@
       <div class="tabs">
         <div class="tab active" onclick="openTab('models')">Models</div>
         <div class="tab" onclick="openTab('train_model')">Train Model</div>
-        <div class="tab" onclick="openTab('files')">Uploaded Files</div>
+        <div class="tab" onclick="openTab('uploaded_files')">Uploaded Files</div>
         <div class="tab" onclick="openTab('comments')">View Comments</div>
-        <div class="tab" onclick="openTab('report')">Report</div>
+        <div class="tab" onclick="openTab('playground')">Playground</div>
       </div>
 
       <!-- MODELS TAB -->
@@ -121,37 +121,29 @@
       </div>
 
       <!-- UPLOADED FILES TAB -->
-      <div id="files" class="tab-content">
+      <div id="uploaded_files" class="tab-content">
         <h2>Uploaded Files</h2>
 
         <table>
           <thead>
             <tr>
               <th>Filename</th>
-              <th>No Of Data</th>
+              <th>No. of Trained Data</th>
               <th>Date Uploaded</th>
               <th>Remarks</th>
+              <th>Action</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="uploaded-files-tbody">
             {% for f in uploaded_files %}
             <tr>
-              <td>{{ f.Filename }}</td>
-              <td>{{ f.NoOfData }}</td>
-              <td>{{ f.DateUploaded }}</td>
-              <td>{{ f.Remarks }}</td>       
+              <td>{{ f.filename }}</td>
+              <td>{{ f.no_of_data }}</td>
+              <td>{{ f.date_uploaded }}</td>
+              <td>{{ f.remarks or "" }}</td>
               <td>
-                <!-- <button class="btn btn-view" onclick="viewComments({{ f.Id }})">
+                <button class="btn btn-view" onclick="openComments('{{ f.file_id }}')">
                   Comments
-                </button>
-                <button class="btn btn-report" onclick="viewReport({{ f.Id }})">
-                  Report
-                </button> -->
-                <button class="btn btn-view" >
-                  Comments
-                </button>
-                <button class="btn btn-report" >
-                  Report
                 </button>
               </td>
             </tr>
@@ -169,48 +161,50 @@
             <tr>
               <th>Comment</th>
               <th>Label</th>
-              <th>Is Trained Data</th>
+              <th>Remarks</th>
             </tr>
           </thead>
-          <tbody id="commentsTable">
+          <tbody id="comments-tbody">
             {% for c in comments %}
             <tr>
-              <td>{{ c.Comment }}</td>
-              <td>{{ c.Label }}</td>
-              <td>{{ c.IsTrainedData }}</td>
+              <td>{{ c.comment }}</td>
+              <td>{{ c.label }}</td>
+              <td>{{ c.remarks }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
 
-      <!-- REPORT TAB -->
-      <div id="report" class="tab-content">
-        <h2>Training Reports</h2>
+      <!-- PLAYGROUND TAB -->
+      <div id="playground" class="tab-content">
+        <div class="sentiment-analysis">
+          <h3>Sentiment Analysis</h3>
+  
+          <!-- Dropdown for trained models -->
+          <label for="model-select">Select Model:</label>
+          <select id="model-select" style="width: 100%; margin-bottom: 10px;">
+            <option value="">-- Select a model --</option>
+            <!-- Options will be populated dynamically -->
+          </select>
+          
+          <!-- Input textbox -->
+          <textarea id="comment-input" rows="3" placeholder="Enter your comment here..." style="width:100%;"></textarea>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Trained Data Filename</th>
-              <th>Test Data Filename</th>
-              <th>Processed Date</th>
-              <th>Report</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in training_reports %}
-            <tr>
-              <td>{{ r.TrainedFilename }}</td>
-              <td>{{ r.TestFilename }}</td>
-              <td>{{ r.ProcessedDate }}</td>
-              <td>{{ r.Report }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+          <!-- Sentiment button -->
+          <button id="sentiment-btn" class="btn btn-primary" style="margin-top: 5px;">
+            Sentiment
+          </button>
+
+          <!-- Display sentiment result -->
+          <div id="sentiment-result" style="margin-top: 10px; font-weight: bold;">
+            <!-- Result will appear here -->
+          </div>
+        </div>
       </div>
     </div>
 
+    
     <script src="/static/script/app.js"></script>
   </body>
 </html>

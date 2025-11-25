@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -22,6 +23,8 @@ from src import (
     LABEL_MAP,
     SUPPORTED_CLASSIFIERS,
 )
+from src.db.crud.comments import list_all_comments, list_comments_by_file
+from src.db.crud.fileinfo import list_fileinfo
 from src.db.crud.trainedmodel import list_trained_models
 from src.db.database import get_db
 from src.db.schemas import TrainModelForm, TrainModelFormDependency
@@ -133,35 +136,29 @@ def job_status(job_id: str):
 #     return {"comment": text, "prediction": pred, "probs": probs}
 
 
-def get_display(request: Request, db: Session):
-    school_years = helper.generate_school_years()
-    semesters = helper.generate_semesters()
-    default_model_name = DEFAULT_TRAINED_MODEL_NAME
-    supported_classifiers = list(SUPPORTED_CLASSIFIERS.keys())
-    default_classifier = DEFAULT_CLASSIFIER
-
-    trained_models = list_trained_models(db)
-    models = [m.to_dict() for m in trained_models]
-
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "school_years": school_years,
-            "semesters": semesters,
-            "default_model_name": default_model_name,
-            "supported_classifiers": supported_classifiers,
-            "default_classifier": default_classifier,
-            "models": models,
-        },
-    )
-
-
 @app.get("/trained-models")
 def get_latest_models(db: Session = Depends(get_db)):
     trained_models = list_trained_models(db)
-    models = [m.to_dict() for m in trained_models]
-    return models
+    result = [m.to_dict() for m in trained_models]
+    return result
+
+
+@app.get("/uploaded-files")
+def get_uploaded_files(db: Session = Depends(get_db)):
+    uploaded_files = list_fileinfo(db)
+    result = [m.to_dict() for m in uploaded_files]
+    return result
+
+
+@app.get("/comments")
+def get_comments(file_id: Optional[str] = None, db: Session = Depends(get_db)):
+    if file_id:
+        comments = list_comments_by_file(db, file_id)
+    else:
+        comments = list_all_comments(db)
+
+    result = [m.to_dict() for m in comments]
+    return result
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -278,7 +278,7 @@ def save_file_info(db, file_id, filename, no_of_data, errors):
         file_id=file_id,
         filename=filename,
         no_of_data=no_of_data,
-        feedback=str(errors),
+        remarks=str(errors),
     )
     create_fileinfo(db, file_info)
 

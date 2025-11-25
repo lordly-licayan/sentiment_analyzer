@@ -17,6 +17,15 @@ class FileInfo(Base):
     # Relationship → one file has many comments
     comments = relationship("Comments", back_populates="file", cascade="all, delete")
 
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+        # Format datetime → readable string
+        if d.get("date_uploaded"):
+            d["date_uploaded"] = d["date_uploaded"].strftime("%Y-%m-%d %H:%M:%S")
+
+        return d
+
 
 class Comments(Base):
     __tablename__ = "commentstbl"
@@ -31,7 +40,7 @@ class Comments(Base):
     file = relationship("FileInfo", back_populates="comments")
 
     def to_dict(self):
-        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class TrainedModel(Base):

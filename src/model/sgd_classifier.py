@@ -137,7 +137,7 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
     update_job(
         job_id,
         status="Complete",
-        progress=f"{progress}%",
+        progress="100%",
         accuracy=f"{accuracy:.2f}%",
         message="Training complete.",
         report=report,
