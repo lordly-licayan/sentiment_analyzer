@@ -54,6 +54,10 @@ async function openTab(tabId, id = null) {
   if (tabId === "comments") {
     await viewComments(id);
   }
+
+  if (tabId === "playground") {
+    await viewPlayground();
+  }
 }
 
 /* ----- DISPLAYING TRAINED MODELS ----- */
@@ -98,6 +102,8 @@ async function viewTrainedModels() {
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("fileInput");
 const fileNameDisplay = document.getElementById("fileName");
+
+document.getElementById("report-info").style.display = "none";
 
 dropzone.addEventListener("click", () => fileInput.click());
 
@@ -200,6 +206,17 @@ function startTraining(enable) {
   } else {
     btn.innerText = "Train";
   }
+}
+
+function isValidModelName(filename) {
+  if (!filename) return false; // empty filename
+
+  // Check for spaces
+  if (filename.includes(" ")) {
+    return false;
+  }
+
+  return true;
 }
 
 async function train_model() {
@@ -363,20 +380,71 @@ async function viewComments(file_id = null) {
   }
 }
 
-function isValidModelName(filename) {
-  if (!filename) return false; // empty filename
+/* ----- VIEW PLAYGROUND ----- */
+async function viewPlayground() {
+  const res = await fetch("/trained-models");
 
-  // Check for spaces
-  if (filename.includes(" ")) {
-    return false;
+  if (!res.ok) throw new Error("Failed to fetch /trained-models");
+
+  const models = await res.json();
+  if (models.length === 0) {
+    alert("No trained models available!");
+    return;
   }
 
-  // Check if it ends with .pkl (case-insensitive)
-  // if (!filename.toLowerCase().endsWith(".pkl")) {
-  //   return false;
-  // }
+  // Get the select element
+  const selectElement = document.getElementById("model-select");
 
-  return true;
+  // Populate only with model_name
+  models
+    .map((model) => {
+      const option = document.createElement("option");
+      option.value = model.model_name;
+      option.textContent = `${model.model_name} (${model.classifier} - ${model.accuracy}% accuracy)`;
+      return option;
+    })
+    .forEach((option) => selectElement.appendChild(option));
 }
 
-document.getElementById("report-info").style.display = "none";
+async function get_sentiments() {
+  const model_name = document.getElementById("model-select").value.trim();
+  const comments = document.getElementById("comments-box").value.trim();
+
+  if (!model_name) {
+    alert("Please choose a model name.");
+  } else if (!comments) {
+    alert("Please write a comment first.");
+  }
+  const sentiment_display = document.getElementById("sentiment-result");
+  const spinner = document.getElementById("sentiment-spinner");
+
+  sentiment_display.innerHTML = "";
+  spinner.style.display = "block";
+
+  const res = await fetch(`/predict-sentiment?model_name=${model_name}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: comments }),
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch /predict-sentiment.");
+
+  const data = await res.json();
+
+  spinner.style.display = "none";
+
+  for (const [comment, sentiment] of Object.entries(data)) {
+    const color =
+      sentiment === "positive"
+        ? "blue"
+        : sentiment === "negative"
+        ? "red"
+        : "black";
+
+    sentiment_display.innerHTML += `
+      <div style="font-size: 15px; margin-bottom: 8px;">
+        ${comment} → <span style="color: ${color};">${sentiment}</span>
+      </div>
+    `;
+  }
+}

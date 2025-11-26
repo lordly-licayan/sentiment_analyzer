@@ -9,7 +9,6 @@ from src import (
     DEFAULT_CLASSIFIER,
     JOBS,
     LOGISTIC_REGRESSION_MODEL,
-    SGD_CLASSIFIER_MODEL,
 )
 
 

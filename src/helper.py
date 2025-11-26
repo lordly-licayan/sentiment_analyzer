@@ -309,15 +309,16 @@ def save_trained_model(
     Save the trained model to Google Cloud.
     """
     ext = SUPPORTED_CLASSIFIERS.get(data.classifierModel)
+    model_name = f"{data.modelName}.{ext}"
 
-    model_path = os.path.join(model_dir, f"{data.modelName}.{ext}")
+    model_path = os.path.join(model_dir, model_name)
     joblib.dump(clf, model_path)
     logger.info(f"Model saved to {model_path}")
 
     trained_model = TrainedModelBase(
         sy=data.sy,
         semester=data.semester,
-        model_name=data.modelName,
+        model_name=model_name,
         classifier=data.classifierModel,
         accuracy=accuracy,
         no_of_data=no_of_data,
@@ -325,3 +326,31 @@ def save_trained_model(
     )
 
     create_trained_model(db, trained_model)
+
+
+def get_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
+    model_path = os.path.join(model_dir, model_name)
+    logger.info(f"loading model from {model_path}.")
+    clf = joblib.load(model_path)
+    logger.info(f"Done loading.")
+    return clf
+
+
+def get_sentiments(trained_model, payload: str):
+    text = payload["text"]
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    print(f"Lines: {lines}")
+
+    data = {}
+    logger.info(f"Get embedder.")
+    embedder = get_embedder()
+    logger.info(f"Done getting embedder.")
+    for line in lines:
+        logger.info(f"Perform prediction.")
+        vector = embedder.encode([line], convert_to_numpy=True)
+        pred_label = trained_model.predict(vector)[0]
+        data[line] = pred_label
+        logger.info(f"Done prediction.")
+        print(f"Comment: {line} :: Sentiment: {pred_label}")
+
+    return data

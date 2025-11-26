@@ -28,7 +28,13 @@ from src.db.crud.fileinfo import list_fileinfo
 from src.db.crud.trainedmodel import list_trained_models
 from src.db.database import get_db
 from src.db.schemas import TrainModelForm, TrainModelFormDependency
-from src.helper import create_job, get_file_hash, logger
+from src.helper import (
+    create_job,
+    get_file_hash,
+    get_sentiments,
+    get_trained_model,
+    logger,
+)
 import src.helper as helper
 
 from src.trainer import process_data_and_train, JOBS
@@ -103,37 +109,21 @@ def job_status(job_id: str):
     return JOBS[job_id]
 
 
-# @app.post("/predict")
-# async def predict_text(payload: dict):
-#     text = payload.get("comment") if isinstance(payload, dict) else None
+@app.post("/predict-sentiment")
+async def predict_sentiments(model_name: str, payload: dict):
+    if not model_name:
+        raise HTTPException(status_code=500, detail=f"No model name.")
 
-#     if not text:
-#         logger.warning("Prediction request with no comment")
-#         raise HTTPException(status_code=400, detail="No comment provided")
+    if not payload:
+        raise HTTPException(status_code=500, detail=f"No payload sent.")
 
-#     logger.info("Prediction requested")
+    trained_model = get_trained_model(model_name)
+    if not trained_model:
+        logger.warning(f"Model {model_name} not found!")
+        raise HTTPException(status_code=500, detail=f"Model {model_name} not found!")
 
-#     if not os.path.exists(MODEL_PATH):
-#         logger.warning("Prediction failed — model missing")
-#         raise HTTPException(
-#             status_code=404,
-#             detail="Model not trained yet. Upload CSV to train.",
-#         )
-
-#     data = joblib.load(MODEL_PATH)
-#     clf = data["clf"]
-
-#     embedder = helper.get_embedder()
-#     emb = embedder.encode([text])
-
-#     pred = clf.predict(emb)[0]
-#     probs = (
-#         clf.predict_proba(emb)[0].tolist() if hasattr(clf, "predict_proba") else None
-#     )
-
-#     logger.info(f"Prediction complete — label={pred}")
-
-#     return {"comment": text, "prediction": pred, "probs": probs}
+    sentiments = get_sentiments(trained_model, payload)
+    return sentiments
 
 
 @app.get("/trained-models")

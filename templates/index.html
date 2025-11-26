@@ -189,10 +189,10 @@
           </select>
           
           <!-- Input textbox -->
-          <textarea id="comment-input" rows="3" placeholder="Enter your comment here..." style="width:100%;"></textarea>
+          <textarea id="comments-box" rows="5" placeholder="Enter your comment here..." style="width:100%;"></textarea>
 
           <!-- Sentiment button -->
-          <button id="sentiment-btn" class="btn btn-primary" style="margin-top: 5px;">
+          <button id="sentiment-btn" class="btn btn-primary" style="margin-top: 5px; font-size: 20px; " onclick="get_sentiments()">
             Sentiment
           </button>
 
@@ -200,11 +200,30 @@
           <div id="sentiment-result" style="margin-top: 10px; font-weight: bold;">
             <!-- Result will appear here -->
           </div>
-        </div>
+          <div id="sentiment-spinner" style="display:none; text-align:center; margin:20px;">
+            Generating...
+            <div class="loader"></div>
+          </div>
+          </div>
       </div>
     </div>
+    <style>
+        /* Simple CSS spinner */
+        .loader {
+          border: 8px solid #f3f3f3; /* Light gray */
+          border-top: 8px solid #3498db; /* Blue */
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          animation: spin 1s linear infinite;
+          margin: auto;
+        }
 
-    
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
     <script src="/static/script/app.js"></script>
   </body>
 </html>
