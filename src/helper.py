@@ -189,7 +189,6 @@ def save_comments_to_csv(comments, labels, output_path="output.csv"):
 
 
 def get_embedder(model_name=EMBEDDER_MODEL):
-    logger.info("Loading embedder model: {model_name}")
     embedder = SentenceTransformer(model_name)
     return embedder
 
@@ -330,27 +329,19 @@ def save_trained_model(
 
 def get_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
     model_path = os.path.join(model_dir, model_name)
-    logger.info(f"loading model from {model_path}.")
     clf = joblib.load(model_path)
-    logger.info(f"Done loading.")
     return clf
 
 
 def get_sentiments(trained_model, payload: str):
     text = payload["text"]
     lines = [l.strip() for l in text.split("\n") if l.strip()]
-    print(f"Lines: {lines}")
 
     data = {}
-    logger.info(f"Get embedder.")
     embedder = get_embedder()
-    logger.info(f"Done getting embedder.")
     for line in lines:
-        logger.info(f"Perform prediction.")
         vector = embedder.encode([line], convert_to_numpy=True)
         pred_label = trained_model.predict(vector)[0]
         data[line] = pred_label
-        logger.info(f"Done prediction.")
-        print(f"Comment: {line} :: Sentiment: {pred_label}")
 
     return data

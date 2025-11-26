@@ -100,10 +100,7 @@ async def train_model(
 
 @app.get("/training-status/{job_id}")
 def job_status(job_id: str):
-    logger.info(f"Checking job status for {job_id}")
-
     if job_id not in JOBS:
-        logger.warning(f"Job ID not found: {job_id}")
         raise HTTPException(status_code=404, detail="Job ID not found")
 
     return JOBS[job_id]

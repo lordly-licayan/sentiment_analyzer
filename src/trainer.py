@@ -164,7 +164,6 @@ def process_data_and_train(
         result, errors = process_data(df)
         new_comments, new_labels = dict_to_lists(result)
         no_of_new_comments = len(new_comments)
-        logger.info(f"no. of new comments: {no_of_new_comments}")
 
         if no_of_new_comments == 0:
             logger.info(f"[{job_id}] No valid data to train on.")
@@ -184,18 +183,7 @@ def process_data_and_train(
 
         # get the equivalent sentiments for the labels
         sentiments = convert_label_to_sentiment(all_labels)
-
         no_of_trained_data = len(all_comments)
-        logger.info(f"no_of_trained_data: {no_of_trained_data}")
-
-        # retrieve all comments from the database if logistic regression is used.
-        # if data.classifierModel == LOGISTIC_REGRESSION_MODEL:
-        #     retrieved_comments = list_all_comments(db)
-        #     all_comments = comments + [m.to_dict() for m in retrieved_comments]
-        #     no_of_trained_data = len(all_comments)
-        # elif data.classifierModel == SGD_CLASSIFIER_MODEL:
-        #     if existing_model:
-        #         no_of_trained_data = existing_model.no_of_data + no_of_comments
 
         # ---------------------------------------
         # Embedding
@@ -212,11 +200,10 @@ def process_data_and_train(
         # ---------------------------------------
         # Train model
         # ---------------------------------------
-        logger.info(f"[{job_id}] Training model using SGDClassifier")
+        logger.info(f"[{job_id}] Training model.")
         clf, report, accuracy = perform_training(
             job_id, data.modelName, data.classifierModel, X_train, y_train
         )
-        logger.info(f"[{job_id}] Report: {report}")
 
         # ---------------------------------------
         # Save model and other information
