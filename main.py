@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Optional
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,7 +21,6 @@ import uvicorn
 from src import (
     DEFAULT_CLASSIFIER,
     DEFAULT_TRAINED_MODEL_NAME,
-    LABEL_MAP,
     SUPPORTED_CLASSIFIERS,
 )
 from src.db.crud.comments import list_all_comments, list_comments_by_file
@@ -30,7 +30,6 @@ from src.db.database import get_db
 from src.db.schemas import TrainModelForm, TrainModelFormDependency
 from src.helper import (
     create_job,
-    get_file_hash,
     get_sentiments,
     get_trained_model,
     logger,
@@ -39,14 +38,15 @@ import src.helper as helper
 
 from src.trainer import process_data_and_train, JOBS
 
+BASE_DIR = Path(__file__).resolve().parent
 
 # -----------------------------------------------------------
 # FASTAPI APP
 # -----------------------------------------------------------
 app = FastAPI(title="Sentiment API")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,22 +73,10 @@ async def train_model(
             logger.warning("File rejected — not CSV")
             raise HTTPException(status_code=400, detail="Uploaded file must be a CSV")
 
-        filename = file.filename
-
-        try:
-            file_content = await file.read()
-        except Exception as e:
-            logger.error(f"Failed to read uploaded file: {e}")
-            raise HTTPException(
-                status_code=500, detail=f"Error reading uploaded file: {e}"
-            )
-
         job_id = create_job()
         logger.info(f"Created job {job_id} — queued for background processing")
 
-        background.add_task(
-            process_data_and_train, job_id, filename, file_content, form_data, db
-        )
+        background.add_task(process_data_and_train, job_id, file, form_data, db)
 
         return {"job_id": job_id}
 

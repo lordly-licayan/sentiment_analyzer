@@ -81,7 +81,7 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
     epochs = calculate_epochs(n_samples)
     classes = np.unique(y_train)  # full set of labels
 
-    logger.info(f"Job {job_id}: Starting training for {epochs} epochs")
+    logger.info(f"Job {job_id}: Starting training for {epochs} epochs.")
     update_job(
         job_id,
         status="Training",
@@ -131,7 +131,7 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
 
     # Final evaluation on validation set
     report = classification_report(y_val, y_val_pred, output_dict=True)
-    accuracy = acc * 100
+    accuracy = round(acc * 100, 2)
     logger.info(f"Training completed. Best Val Accuracy: {best_acc:.4f}")
 
     update_job(

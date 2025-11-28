@@ -3,6 +3,11 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Classifier model
+.pkl
+.lr
+.sgd
+
 # C extensions
 *.so
 
@@ -205,9 +210,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-
-
-# Classifier model
-.pkl
-.lr
-.sgd

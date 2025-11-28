@@ -1,5 +1,6 @@
 import time
 import traceback
+from fastapi import HTTPException, UploadFile
 import numpy as np
 import pandas as pd
 from io import StringIO
@@ -9,6 +10,7 @@ from src import (
     DEFAULT_CLASSIFIER,
     JOBS,
     LOGISTIC_REGRESSION_MODEL,
+    SUPPORTED_CLASSIFIERS,
 )
 
 
@@ -118,9 +120,19 @@ def perform_training(job_id, model_name, classifier_model, X_train, y_train):
 # -----------------------------------------------------------
 # BACKGROUND TASK (TRAINING)
 # -----------------------------------------------------------
-def process_data_and_train(
-    job_id: str, filename: str, file_content: bytes, data: TrainModelForm, db: Session
+async def process_data_and_train(
+    job_id: str, file: UploadFile, data: TrainModelForm, db: Session
 ):
+    """
+    Background task to process data and train the model.
+    Args:
+        job_id (str): Job identifier for status updates
+        file (UploadFile): Uploaded CSV file
+        data (TrainModelForm): Form data with training parameters
+        db (Session): Database session
+    Returns:
+        None
+    """
     start_time = time.time()
     logger.info(f"[{job_id}] Background task started.")
 
@@ -131,15 +143,27 @@ def process_data_and_train(
             message="Decoding CSV and processing data...",
         )
 
-        existing_model = get_trained_model_name(db, data.modelName)
-        no_of_trained_data = 0
+        filename = file.filename
+
+        try:
+            file_content = await file.read()
+        except Exception as e:
+            logger.error(f"Failed to read uploaded file: {e}")
+            raise HTTPException(
+                status_code=500, detail=f"Error reading uploaded file: {e}"
+            )
+
+        ext = SUPPORTED_CLASSIFIERS.get(data.classifierModel)
+        model_name = f"{data.modelName}.{ext}"
+
+        existing_model = get_trained_model_name(db, model_name)
 
         if data.classifierModel == LOGISTIC_REGRESSION_MODEL:
             if existing_model:
                 update_job(
                     job_id,
                     status="Error",
-                    message=f"Model name {data.modelName} already exists.",
+                    message=f"Model name {model_name} already exists.",
                 )
                 return
 
@@ -160,7 +184,6 @@ def process_data_and_train(
             )
             return
 
-        # comments, labels, errors = process_data(df)
         result, errors = process_data(df)
         new_comments, new_labels = dict_to_lists(result)
         no_of_new_comments = len(new_comments)
@@ -178,7 +201,7 @@ def process_data_and_train(
         retrieved_comments = list_all_comments(db)
 
         # combine retrieved comments and the new comments
-        combined_comments = result | {m.comment: m.label for m in retrieved_comments}
+        combined_comments = {m.comment: m.label for m in retrieved_comments} | result
         all_comments, all_labels = dict_to_lists(combined_comments)
 
         # get the equivalent sentiments for the labels
@@ -216,7 +239,7 @@ def process_data_and_train(
             f"Model is trained by {data.classifierModel} with {accuracy}% accuracy."
         )
         save_trained_model(
-            db, clf, data, round(accuracy, 2), no_of_trained_data, remarks
+            db, clf, data, round(accuracy, 2), no_of_trained_data, remarks, model_name
         )
 
         elapsedTime = format_seconds(time.time() - start_time)

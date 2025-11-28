@@ -27,7 +27,7 @@ def train_logistic_regression(
         report: Classification report dictionary
     """
 
-    logger.info("Training LogisticRegression model")
+    logger.info("Training LogisticRegression model.")
     update_job(
         job_id,
         status="Training",
@@ -62,7 +62,7 @@ def train_logistic_regression(
     y_val_pred = clf.predict(X_val_scaled)
     val_report = classification_report(y_val, y_val_pred, output_dict=True)
     val_acc = accuracy_score(y_val, y_val_pred)
-    accuracy = val_acc * 100
+    accuracy = round(val_acc * 100, 2)
 
     report = {
         "trained_report": train_report,

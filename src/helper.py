@@ -9,6 +9,7 @@ import joblib
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from src import (
+    DEFAULT_TRAINED_MODEL_NAME,
     EMBEDDER_MODEL,
     JOBS,
     LABEL_MAP,
@@ -302,15 +303,17 @@ def save_trained_model(
     accuracy,
     no_of_data,
     remarks,
+    model_name=DEFAULT_TRAINED_MODEL_NAME,
     model_dir=TRAINED_MODEL_DIR,
 ):
     """
     Save the trained model to Google Cloud.
     """
-    ext = SUPPORTED_CLASSIFIERS.get(data.classifierModel)
-    model_name = f"{data.modelName}.{ext}"
+    if os.path.exists(model_dir):
+        os.makedirs(model_dir, exist_ok=True)
 
     model_path = os.path.join(model_dir, model_name)
+
     joblib.dump(clf, model_path)
     logger.info(f"Model saved to {model_path}")
 
@@ -328,12 +331,23 @@ def save_trained_model(
 
 
 def get_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
+    """
+    Load the trained model from Google Cloud Storage.
+    """
     model_path = os.path.join(model_dir, model_name)
     clf = joblib.load(model_path)
     return clf
 
 
 def get_sentiments(trained_model, payload: str):
+    """
+    Get sentiments for the given payload using the trained model.
+    Args:
+        trained_model: Loaded trained model
+        payload (dict): Payload containing 'text' key with comments
+        Returns:
+        dict: Mapping of comment to predicted sentiment label
+    """
     text = payload["text"]
     lines = [l.strip() for l in text.split("\n") if l.strip()]
 

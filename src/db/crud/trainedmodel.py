@@ -1,4 +1,3 @@
-# crud/trainedmodel.py
 from sqlalchemy.orm import Session
 from .. import models, schemas
 
@@ -25,7 +24,7 @@ def get_trained_model(db: Session, model_id: int):
     )
 
 
-def get_trained_model_name(db: Session, model_name: int):
+def get_trained_model_name(db: Session, model_name: str):
     return (
         db.query(models.TrainedModel)
         .filter(models.TrainedModel.model_name == model_name)
