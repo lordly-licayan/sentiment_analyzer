@@ -393,3 +393,17 @@ def process_payload(trained_model, payload: str):
 
     print(data)
     return data
+
+
+def remove_trained_model(
+    model_name=DEFAULT_TRAINED_MODEL_NAME, model_dir=TRAINED_MODEL_DIR
+):
+    """
+    Remove the trained model file from local storage.
+    """
+    model_path = os.path.join(model_dir, model_name)
+    if os.path.exists(model_path):
+        os.remove(model_path)
+        logger.info(f"Model {model_name} removed from {model_dir}")
+    else:
+        logger.warning(f"Model {model_name} not found in {model_dir}")

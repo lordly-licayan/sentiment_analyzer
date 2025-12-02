@@ -55,3 +55,9 @@ def delete_trained_model(db: Session, model_id: int):
     db.delete(db_model)
     db.commit()
     return True
+
+
+def delete_trained_model(db: Session, trained_model: models.TrainedModel):
+    db.delete(trained_model)
+    db.commit()
+    return True

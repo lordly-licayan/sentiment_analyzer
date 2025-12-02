@@ -31,15 +31,19 @@ from src.db.crud.comments import (
     list_last_comments,
 )
 from src.db.crud.fileinfo import delete_fileinfo, get_fileinfo, list_fileinfo
-from src.db.crud.trainedmodel import list_trained_models
+from src.db.crud.trainedmodel import (
+    delete_trained_model,
+    list_trained_models,
+    get_trained_model,
+)
 from src.db.database import get_db
 from src.db.schemas import TrainModelForm, TrainModelFormDependency
 from src.helper import (
     create_job,
     get_file_hash,
-    get_trained_model,
     logger,
     process_payload,
+    remove_trained_model,
 )
 import src.helper as helper
 
@@ -157,6 +161,32 @@ def get_latest_models(db: Session = Depends(get_db)):
     trained_models = list_trained_models(db)
     result = [m.to_dict() for m in trained_models]
     return result
+
+
+@app.delete("/delete-model/{model_id}")
+def delete_model(model_id: int, db: Session = Depends(get_db)):
+    """Endpoint to delete a trained model from the database.
+    Args:
+        model_id (int): ID of the trained model to be deleted.
+        db (Session): Database session dependency.
+        Returns:
+        dict: Confirmation message.
+    """
+    trained_model = get_trained_model(db, model_id)
+    if not trained_model:
+        raise HTTPException(
+            status_code=404, detail=f"Trained model with ID {model_id} not found."
+        )
+
+    model_deleted = delete_trained_model(db, trained_model)
+    if not model_deleted:
+        raise HTTPException(
+            status_code=404, detail=f"Trained model with ID {model_id} can not deleted."
+        )
+
+    remove_trained_model(trained_model.model_name)
+
+    return {"detail": f"Trained model with ID {model_id} has been deleted."}
 
 
 @app.get("/uploaded-files")

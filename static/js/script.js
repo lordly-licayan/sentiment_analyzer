@@ -67,6 +67,15 @@ async function viewTrainedModels() {
                     <td>${m.no_of_data}</td>
                     <td>${m.date_trained}</td>
                     <td>${m.remarks}</td>
+                    <td>
+                      <div>
+                        <button class="btn btn-delete" onclick="deleteModel('${
+                          m.id
+                        }')">
+                        Delete
+                        </button>
+                      </div>
+                    </td>
                 </tr>
             `;
     });
@@ -464,6 +473,23 @@ document
       row.style.display = comment.includes(filter) ? "" : "none";
     });
   });
+
+function deleteModel(model_id) {
+  if (confirm("Are you sure you want to delete this model?")) {
+    fetch(`/delete-model/${model_id}`, { method: "DELETE" })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to delete model.");
+        }
+        alert("Model deleted successfully.");
+        viewTrainedModels();
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Error deleting model.");
+      });
+  }
+}
 
 function deleteFile(file_id) {
   if (confirm("Are you sure you want to delete this file?")) {
