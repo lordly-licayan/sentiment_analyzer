@@ -1,11 +1,9 @@
+import asyncio
 import time
 import traceback
-from fastapi import HTTPException, UploadFile
 import numpy as np
 import pandas as pd
-from io import StringIO
 
-from sqlalchemy.orm import Session
 from src import (
     DEFAULT_CLASSIFIER,
     JOBS,
@@ -17,11 +15,10 @@ from src import (
 from src.db.crud.comments import list_all_comments
 from src.db.crud.fileinfo import get_fileinfo
 from src.db.crud.trainedmodel import get_trained_model_name
-from src.db.schemas import TrainModelForm
+from src.db.database import get_db
 from src.helper import (
     dict_to_lists,
     format_seconds,
-    get_file_hash,
     logger,
     process_data,
     get_embedder,
@@ -121,44 +118,29 @@ def perform_training(job_id, model_name, classifier_model, X_train, y_train):
 # BACKGROUND TASK (TRAINING)
 # -----------------------------------------------------------
 async def process_data_and_train(
-    job_id: str, file: UploadFile, data: TrainModelForm, db: Session
+    job_id: str, file_id: str, filename: str, df: pd.DataFrame, data: dict
 ):
-    """
-    Background task to process data and train the model.
-    Args:
-        job_id (str): Job identifier for status updates
-        file (UploadFile): Uploaded CSV file
-        data (TrainModelForm): Form data with training parameters
-        db (Session): Database session
-    Returns:
-        None
-    """
+
     start_time = time.time()
     logger.info(f"[{job_id}] Background task started.")
 
     try:
+        db = next(get_db())
+
         update_job(
             job_id,
             status="Processing",
             message="Decoding CSV and processing data...",
         )
 
-        filename = file.filename
+        classifier_model = data.get("classifierModel")
+        ext = SUPPORTED_CLASSIFIERS.get(classifier_model)
 
-        try:
-            file_content = await file.read()
-        except Exception as e:
-            logger.error(f"Failed to read uploaded file: {e}")
-            raise HTTPException(
-                status_code=500, detail=f"Error reading uploaded file: {e}"
-            )
-
-        ext = SUPPORTED_CLASSIFIERS.get(data.classifierModel)
-        model_name = f"{data.modelName}.{ext}"
+        model_name = f"{data.get('modelName')}.{ext}"
 
         existing_model = get_trained_model_name(db, model_name)
 
-        if data.classifierModel == LOGISTIC_REGRESSION_MODEL:
+        if classifier_model == LOGISTIC_REGRESSION_MODEL:
             if existing_model:
                 update_job(
                     job_id,
@@ -169,11 +151,7 @@ async def process_data_and_train(
 
         logger.info(f"[{job_id}] Decoding CSV bytes")
 
-        s = file_content.decode("utf-8", errors="ignore")
-        df = pd.read_csv(StringIO(s))
         logger.info(f"[{job_id}] CSV loaded | Rows: {len(df)}")
-
-        file_id = get_file_hash(file_content)
 
         # Check if file already used for training
         if get_fileinfo(db, file_id):
@@ -225,7 +203,7 @@ async def process_data_and_train(
         # ---------------------------------------
         logger.info(f"[{job_id}] Training model.")
         clf, report, accuracy = perform_training(
-            job_id, data.modelName, data.classifierModel, X_train, y_train
+            job_id, model_name, classifier_model, X_train, y_train
         )
 
         # ---------------------------------------
@@ -235,9 +213,7 @@ async def process_data_and_train(
 
         save_comments(db, file_id, new_comments, new_labels, sentiments)
 
-        remarks = (
-            f"Model is trained by {data.classifierModel} with {accuracy}% accuracy."
-        )
+        remarks = f"Model is trained by {classifier_model} with {accuracy}% accuracy."
         save_trained_model(
             db, clf, data, round(accuracy, 2), no_of_trained_data, remarks, model_name
         )
@@ -258,3 +234,8 @@ async def process_data_and_train(
 
         JOBS[job_id]["status"] = "Error"
         JOBS[job_id]["message"] = str(e)
+
+
+def run_trainer(job_id, file_id, filename, df, data):
+    """Sync wrapper to run async function properly."""
+    asyncio.run(process_data_and_train(job_id, file_id, filename, df, data))

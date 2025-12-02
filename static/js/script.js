@@ -1,28 +1,4 @@
-/* ----- TAB SWITCHING ----- */
-// async function openTab(tabId) {
-//   document
-//     .querySelectorAll(".tab")
-//     .forEach((t) => t.classList.remove("active"));
-//   document
-//     .querySelectorAll(".tab-content")
-//     .forEach((c) => c.classList.remove("active"));
-
-//   event.target.classList.add("active");
-//   document.getElementById(tabId).classList.add("active");
-
-//   if (tabId === "models") {
-//     await viewTrainedModels();
-//   }
-
-//   if (tabId === "uploaded_files") {
-//     await viewUploadedFiles();
-//   }
-
-//   if (tabId === "comments") {
-//     await viewComments();
-//   }
-// }
-
+/* ----- TAB NAVIGATION ----- */
 async function openTab(tabId, id = null) {
   document
     .querySelectorAll(".tab")
@@ -427,9 +403,13 @@ async function get_sentiments() {
     body: JSON.stringify({ text: comments }),
   });
 
-  if (!res.ok) throw new Error("Failed to fetch /predict-sentiment.");
+  if (!res.ok) {
+    spinner.style.display = "none";
+    throw new Error("Failed to fetch /predict-sentiment.");
+  }
 
   const data = await res.json();
+  console.log(data);
 
   spinner.style.display = "none";
 

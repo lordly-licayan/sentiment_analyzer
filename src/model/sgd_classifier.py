@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import train_test_split
-from src import JOBS
+from src import JOBS, PATIENCE, TRAINED_MODEL_DIR
 from src.helper import logger, update_job
 from sklearn.metrics import classification_report, accuracy_score
 
@@ -30,7 +30,7 @@ def create_SGD_classifier():
 
 def get_model(model_name: str):
 
-    model_path = os.path.join(os.getenv("TRAINED_MODEL_DIR"), model_name)
+    model_path = os.path.join(TRAINED_MODEL_DIR, model_name)
     if os.path.exists(model_path):
         clf = joblib.load(model_path)
     else:
@@ -91,7 +91,7 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
     # Early stopping variables
     best_acc = 0
     wait = 0
-    patience = int(os.getenv("PATIENCE", 5))  # default 5 if not set
+    patience = int(PATIENCE)  # default 5 if not set
 
     for epoch in range(epochs):
 

@@ -7,14 +7,14 @@ import logging
 
 import joblib
 import pandas as pd
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, util
 from src import (
     DEFAULT_TRAINED_MODEL_NAME,
     EMBEDDER_MODEL,
+    HUGGINGFACE_HUB_TOKEN,
     JOBS,
     LABEL_MAP,
-    SUPPORTED_CLASSIFIERS,
-    TEST_DATA_PATH,
+    TEACHER_EVALUATION_CATEGORIES,
     TRAINED_MODEL_DIR,
 )
 from uuid import uuid4
@@ -23,7 +23,7 @@ from uuid import uuid4
 from src.db.crud.comments import create_comments
 from src.db.crud.fileinfo import create_fileinfo
 from src.db.crud.trainedmodel import create_trained_model
-from src.db.schemas import CommentBase, FileInfoBase, TrainModelForm, TrainedModelBase
+from src.db.schemas import CommentBase, FileInfoBase, TrainedModelBase
 
 # -----------------------------------------------------------
 # LOGGING CONFIGURATION
@@ -190,7 +190,7 @@ def save_comments_to_csv(comments, labels, output_path="output.csv"):
 
 
 def get_embedder(model_name=EMBEDDER_MODEL):
-    embedder = SentenceTransformer(model_name)
+    embedder = SentenceTransformer(model_name, token=HUGGINGFACE_HUB_TOKEN)
     return embedder
 
 
@@ -299,7 +299,7 @@ def save_comments(db, file_id, comments, labels, sentiments):
 def save_trained_model(
     db,
     clf,
-    data: TrainModelForm,
+    data: dict,
     accuracy,
     no_of_data,
     remarks,
@@ -318,10 +318,10 @@ def save_trained_model(
     logger.info(f"Model saved to {model_path}")
 
     trained_model = TrainedModelBase(
-        sy=data.sy,
-        semester=data.semester,
+        sy=data.get("sy"),
+        semester=data.get("semester"),
         model_name=model_name,
-        classifier=data.classifierModel,
+        classifier=data.get("classifierModel"),
         accuracy=accuracy,
         no_of_data=no_of_data,
         remarks=remarks,
@@ -339,7 +339,15 @@ def get_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
     return clf
 
 
-def get_sentiments(trained_model, payload: str):
+def sort_scores(scores: dict) -> dict:
+    """
+    Sort a dictionary by its values in descending order.
+    Returns a new ordered dictionary.
+    """
+    return dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
+
+
+def process_payload(trained_model, payload: str):
     """
     Get sentiments for the given payload using the trained model.
     Args:
@@ -353,9 +361,35 @@ def get_sentiments(trained_model, payload: str):
 
     data = {}
     embedder = get_embedder()
-    for line in lines:
-        vector = embedder.encode([line], convert_to_numpy=True)
-        pred_label = trained_model.predict(vector)[0]
-        data[line] = pred_label
+    category_embeddings = embedder.encode(
+        TEACHER_EVALUATION_CATEGORIES, convert_to_tensor=True
+    )
+    print(TEACHER_EVALUATION_CATEGORIES)
 
+    for line in lines:
+        comment_embedding = embedder.encode([line], convert_to_numpy=True)
+
+        probs = trained_model.predict_proba(comment_embedding)
+        logger.info(f"Predicted probabilities for line '{line}': {probs}")
+
+        # Compute similarity scores (cosine similarity)
+        scores = util.cos_sim(comment_embedding, category_embeddings)[0].cpu().tolist()
+
+        # # Get best category and score
+        # best_index = scores.index(max(scores))
+        # best_category = categories[best_index]
+
+        sentiment = trained_model.predict(comment_embedding)[0]
+        data[line] = {
+            "sentiment": sentiment,
+            "probs": probs.tolist(),
+            "category": sort_scores(
+                {
+                    TEACHER_EVALUATION_CATEGORIES[i]: round(float(scores[i]), 2)
+                    for i in range(len(TEACHER_EVALUATION_CATEGORIES))
+                }
+            ),
+        }
+
+    print(data)
     return data
