@@ -440,6 +440,14 @@ async function get_sentiments() {
     sentiment_display.innerHTML += `
       <div style="font-size: 15px; margin-bottom: 8px;">
         ${comment} → <span style="color: ${color};">${item.sentiment}</span>
+        <br/>
+        <span style="font-size: 15px; color: #0f4404ff">Categories:</span>
+        <br/>
+        <div style="margin-left: 15px; font-size: 12px;;">
+          ${Object.entries(item.category)
+            .map(([cat, score]) => `${cat}: ${score.toFixed(4)}`)
+            .join(", ")}
+        </div>
       </div>
     `;
   }
