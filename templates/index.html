@@ -23,6 +23,7 @@
         <table>
           <thead>
             <tr>
+              <th>No.</th>
               <th>SY</th>
               <th>Semester</th>
               <th>Model Name</th>
@@ -34,7 +35,7 @@
             </tr>
           </thead>
           <tbody id="models-tbody">
-            {% for m in models %}
+            <!-- {% for m in models %}
             <tr>
               <td>{{ m.sy }}</td>
               <td>{{ m.semester }}</td>
@@ -45,7 +46,7 @@
               <td>{{ m.date_trained }}</td>
               <td>{{ m.remarks }}</td>
             </tr>
-            {% endfor %}
+            {% endfor %} -->
           </tbody>
         </table>
       </div>
@@ -125,6 +126,7 @@
         <table>
           <thead>
             <tr>
+              <th>No.</th>
               <th>Filename</th>
               <th>No. of Trained Data</th>
               <th>Date Uploaded</th>
@@ -133,7 +135,7 @@
             </tr>
           </thead>
           <tbody id="uploaded-files-tbody">
-            {% for f in uploaded_files %}
+            <!-- {% for f in uploaded_files %}
             <tr>
               <td>{{ f.filename }}</td>
               <td>{{ f.no_of_data }}</td>
@@ -145,31 +147,32 @@
                 </button>
               </td>
             </tr>
-            {% endfor %}
+            {% endfor %} -->
           </tbody>
         </table>
       </div>
 
       <!-- VIEW COMMENTS TAB -->
       <div id="comments" class="tab-content">
-        <h2>Comments</h2>
+        <h2 id="comments_desc">Comments</h2>
 
         <table>
           <thead>
             <tr>
+              <th>No.</th>
               <th>Comment</th>
               <th>Label</th>
               <th>Remarks</th>
             </tr>
           </thead>
           <tbody id="comments-tbody">
-            {% for c in comments %}
+            <!-- {% for c in comments %}
             <tr>
               <td>{{ c.comment }}</td>
               <td>{{ c.label }}</td>
               <td>{{ c.remarks }}</td>
             </tr>
-            {% endfor %}
+            {% endfor %} -->
           </tbody>
         </table>
       </div>

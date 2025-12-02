@@ -54,9 +54,11 @@ async function viewTrainedModels() {
 
     tbody.innerHTML = ""; // Clear old rows
 
+    let counter = 1;
     models.forEach((m) => {
       tbody.innerHTML += `
                 <tr>
+                    <td>${counter++}</td>
                     <td>${m.sy}</td>
                     <td>${m.semester}</td>
                     <td>${m.model_name}</td>
@@ -289,9 +291,11 @@ async function viewUploadedFiles() {
 
     tbody.innerHTML = ""; // Clear table
 
+    let counter = 1;
     result.forEach((m) => {
       tbody.innerHTML += `
         <tr>
+          <td>${counter++}</td>
           <td>${m.filename}</td>
           <td>${m.no_of_data}</td>
           <td>${m.date_uploaded}</td>
@@ -319,6 +323,7 @@ async function openCommentsTab(file_id) {
 
 async function viewComments(file_id = null) {
   const tbody = document.getElementById("comments-tbody");
+  const comments_desc = document.getElementById("comments_desc");
   tbody.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
 
   try {
@@ -328,6 +333,7 @@ async function viewComments(file_id = null) {
       res = await fetch(`/comments?file_id=${file_id}`);
     } else {
       res = await fetch("/comments");
+      comments_desc.innerText = `Last 100 Comments`;
     }
 
     if (!res.ok) throw new Error("Failed to fetch /comments");
@@ -340,10 +346,15 @@ async function viewComments(file_id = null) {
     }
 
     tbody.innerHTML = ""; // Clear table
+    if (file_id && result.filename) {
+      comments_desc.innerText = `Comments for File: ${result.filename}`;
+    }
 
-    result.forEach((m) => {
+    let counter = 1;
+    result.comments.forEach((m) => {
       tbody.innerHTML += `
         <tr>
+          <td>${counter++}</td>
           <td>${m.comment}</td>
           <td>${m.label}</td>
           <td>${m.remarks ?? ""}</td>
@@ -428,3 +439,5 @@ async function get_sentiments() {
     `;
   }
 }
+
+openTab("models");

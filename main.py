@@ -1,7 +1,6 @@
 from io import StringIO
 import os
 from pathlib import Path
-import shutil
 from typing import Optional
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,8 +25,12 @@ from src import (
     DEFAULT_TRAINED_MODEL_NAME,
     SUPPORTED_CLASSIFIERS,
 )
-from src.db.crud.comments import list_all_comments, list_comments_by_file
-from src.db.crud.fileinfo import list_fileinfo
+from src.db.crud.comments import (
+    list_all_comments,
+    list_comments_by_file,
+    list_last_comments,
+)
+from src.db.crud.fileinfo import get_fileinfo, list_fileinfo
 from src.db.crud.trainedmodel import list_trained_models
 from src.db.database import get_db
 from src.db.schemas import TrainModelForm, TrainModelFormDependency
@@ -40,7 +43,7 @@ from src.helper import (
 )
 import src.helper as helper
 
-from src.trainer import process_data_and_train, JOBS, run_trainer
+from src.trainer import JOBS, run_trainer
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -97,10 +100,7 @@ async def train_model(
         logger.error(f"Failed to read uploaded file: {e}")
         raise HTTPException(status_code=500, detail=f"Error reading uploaded file: {e}")
 
-    # Convert form data into a safe-to-pass dict (not Pydantic object)
     data = form_data.model_dump()
-    print(data)
-
     background.add_task(run_trainer, job_id, file_id, file.filename, df, data)
 
     return {"job_id": job_id}
@@ -181,12 +181,20 @@ def get_comments(file_id: Optional[str] = None, db: Session = Depends(get_db)):
         Returns:
         list: List of comments.
     """
+    filename = None
     if file_id:
+        fileinfo = get_fileinfo(db, file_id)
+        if not fileinfo:
+            raise HTTPException(
+                status_code=404, detail=f"File with ID {file_id} not found."
+            )
+        filename = fileinfo.filename
         comments = list_comments_by_file(db, file_id)
     else:
-        comments = list_all_comments(db)
+        comments = list_last_comments(db)
 
-    result = [m.to_dict() for m in comments]
+    list_of_comments = [m.to_dict() for m in comments]
+    result = {"filename": filename, "comments": list_of_comments}
     return result
 
 

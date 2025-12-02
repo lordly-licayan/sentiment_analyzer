@@ -120,6 +120,15 @@ def perform_training(job_id, model_name, classifier_model, X_train, y_train):
 async def process_data_and_train(
     job_id: str, file_id: str, filename: str, df: pd.DataFrame, data: dict
 ):
+    """
+    Process data and train the model in a background task.
+    Args:
+        job_id (str): The ID of the training job.
+        file_id (str): The hash ID of the uploaded file.
+        filename (str): The name of the uploaded file.
+        df (pd.DataFrame): The DataFrame containing the training data.
+        data (dict): Additional data for training configuration.
+    """
 
     start_time = time.time()
     logger.info(f"[{job_id}] Background task started.")

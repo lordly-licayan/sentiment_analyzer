@@ -1,3 +1,4 @@
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from .. import models, schemas
 
@@ -17,6 +18,19 @@ def create_comments(db: Session, comments: list[schemas.CommentCreate]):
 
 def list_all_comments(db: Session):
     return db.query(models.Comments).distinct(models.Comments.comment).all()
+
+
+def list_last_comments(db: Session, limit: int = 100):
+    return (
+        db.query(models.Comments)
+        .distinct(models.Comments.comment)
+        .order_by(
+            models.Comments.comment,
+            desc(models.Comments.id),
+        )
+        .limit(limit)
+        .all()
+    )
 
 
 def list_comments_by_file(db: Session, file_id: str):
