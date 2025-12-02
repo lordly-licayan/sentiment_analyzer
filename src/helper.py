@@ -381,7 +381,7 @@ def process_payload(trained_model, payload: str):
 
         sentiment = trained_model.predict(comment_embedding)[0]
         data[line] = {
-            "sentiment": sentiment,
+            "sentiment": str(sentiment),
             "probs": probs.tolist(),
             "category": sort_scores(
                 {

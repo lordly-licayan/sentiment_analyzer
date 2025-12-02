@@ -30,7 +30,7 @@ from src.db.crud.comments import (
     list_comments_by_file,
     list_last_comments,
 )
-from src.db.crud.fileinfo import get_fileinfo, list_fileinfo
+from src.db.crud.fileinfo import delete_fileinfo, get_fileinfo, list_fileinfo
 from src.db.crud.trainedmodel import list_trained_models
 from src.db.database import get_db
 from src.db.schemas import TrainModelForm, TrainModelFormDependency
@@ -170,6 +170,24 @@ def get_uploaded_files(db: Session = Depends(get_db)):
     uploaded_files = list_fileinfo(db)
     result = [m.to_dict() for m in uploaded_files]
     return result
+
+
+@app.delete("/delete-file/{file_id}")
+def delete_file(file_id: str, db: Session = Depends(get_db)):
+    """Endpoint to delete a file and its associated comments from the database.
+    Args:
+        file_id (str): ID of the file to be deleted.
+        db (Session): Database session dependency.
+        Returns:
+        dict: Confirmation message.
+    """
+    file_deleted = delete_fileinfo(db, file_id)
+    if not file_deleted:
+        raise HTTPException(
+            status_code=404, detail=f"File with ID {file_id} can not deleted."
+        )
+
+    return {"detail": f"File with ID {file_id} and its comments have been deleted."}
 
 
 @app.get("/comments")

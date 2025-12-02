@@ -301,11 +301,16 @@ async function viewUploadedFiles() {
           <td>${m.date_uploaded}</td>
           <td>${m.remarks ?? ""}</td>
           <td>
+          <div>
             <button class="btn btn-view" onclick="openCommentsTab('${
               m.file_id
             }')">
             Comments
-          </button>
+            </button>
+            <button class="btn btn-delete" onclick="deleteFile('${m.file_id}')">
+            Delete
+            </button>
+          </div>
           </td>
         </tr>
       `;
@@ -424,9 +429,9 @@ async function get_sentiments() {
 
   spinner.style.display = "none";
 
-  for (const [comment, sentiment] of Object.entries(data)) {
+  for (const [comment, item] of Object.entries(data)) {
     const color =
-      sentiment === "positive"
+      item.sentiment === "positive"
         ? "blue"
         : sentiment === "negative"
         ? "red"
@@ -434,10 +439,40 @@ async function get_sentiments() {
 
     sentiment_display.innerHTML += `
       <div style="font-size: 15px; margin-bottom: 8px;">
-        ${comment} → <span style="color: ${color};">${sentiment}</span>
+        ${comment} → <span style="color: ${color};">${item.sentiment}</span>
       </div>
     `;
   }
 }
 
+document
+  .getElementById("comment-search")
+  .addEventListener("input", function () {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll("#comments-tbody tr");
+
+    rows.forEach((row) => {
+      const comment = row.children[1].textContent.toLowerCase();
+      row.style.display = comment.includes(filter) ? "" : "none";
+    });
+  });
+
+function deleteFile(file_id) {
+  if (confirm("Are you sure you want to delete this file?")) {
+    fetch(`/delete-file/${file_id}`, { method: "DELETE" })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to delete file.");
+        }
+        alert("File deleted successfully.");
+        viewUploadedFiles();
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Error deleting file.");
+      });
+  }
+}
+
+//Initialize by opening the Models tab
 openTab("models");

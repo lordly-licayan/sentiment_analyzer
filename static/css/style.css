@@ -82,6 +82,11 @@ table th {
   color: white;
 }
 
+.btn-delete {
+  background: #5fc6ce;
+  color: rgb(15, 15, 15);
+}
+
 .btn-report {
   background: #2196f3;
   color: white;
