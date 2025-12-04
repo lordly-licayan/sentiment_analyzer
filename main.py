@@ -2,6 +2,7 @@ from io import StringIO
 import os
 from pathlib import Path
 from typing import Optional
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -20,20 +21,19 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 import uvicorn
+from model.pydantic_model import SentimentRequest, SentimentResponse
 from src import (
     DEFAULT_CLASSIFIER,
     DEFAULT_TRAINED_MODEL_NAME,
     SUPPORTED_CLASSIFIERS,
 )
 from src.db.crud.comments import (
-    list_all_comments,
     list_comments_by_file,
     list_last_comments,
 )
 from src.db.crud.fileinfo import delete_fileinfo, get_fileinfo, list_fileinfo
 from src.db.crud.trainedmodel import (
     delete_trained_model,
-    list_trained_models,
     get_trained_model,
 )
 from src.db.database import get_db
@@ -41,9 +41,12 @@ from src.db.schemas import TrainModelForm, TrainModelFormDependency
 from src.helper import (
     create_job,
     get_file_hash,
+    get_list_of_trained_models,
+    list_of_uploaded_files,
     logger,
     process_payload,
     remove_trained_model,
+    retrieve_trained_model,
 )
 import src.helper as helper
 
@@ -77,41 +80,36 @@ async def train_model(
     file: UploadFile = File(...),
     form_data: TrainModelForm = Depends(TrainModelFormDependency),
 ):
-    """Endpoint to upload CSV file and start model training in background.
-    Validates file type, creates a job, and schedules background task.
-
+    """Endpoint to handle model training requests.
     Args:
-        background (BackgroundTasks): FastAPI background task manager.
-        file (UploadFile): Uploaded CSV file.
-        form_data (TrainModelForm): Form data for training parameters.
-        db (Session): Database session dependency.
+        background (BackgroundTasks): FastAPI background tasks manager.
+        file (UploadFile): Uploaded CSV file containing training data.
+        form_data (TrainModelForm): Additional training configuration data.
         Returns:
-        dict: Response containing job ID.
+        dict: Contains the job ID for tracking the training process.
     """
     if not file.filename.endswith(".csv"):
-        logger.warning("File rejected — not CSV")
         raise HTTPException(status_code=400, detail="Uploaded file must be a CSV")
 
     job_id = create_job()
-    logger.info(f"Created job {job_id} — scheduling background task")
 
     try:
-        file_content = await file.read()
-        file_id = get_file_hash(file_content)
-        s = file_content.decode("utf-8", errors="ignore")
-        df = pd.read_csv(StringIO(s))
+        raw = await file.read()
+        file_id = get_file_hash(raw)
+
+        df = pd.read_csv(StringIO(raw.decode("utf-8", errors="ignore")))
     except Exception as e:
-        logger.error(f"Failed to read uploaded file: {e}")
         raise HTTPException(status_code=500, detail=f"Error reading uploaded file: {e}")
 
-    data = form_data.model_dump()
-    background.add_task(run_trainer, job_id, file_id, file.filename, df, data)
+    background.add_task(
+        run_trainer, job_id, file_id, file.filename, df, form_data.model_dump()
+    )
 
     return {"job_id": job_id}
 
 
 @app.get("/training-status/{job_id}")
-def job_status(job_id: str):
+async def job_status(job_id: str):
     """Endpoint to check the status of a training job by its ID.
     Args:
         job_id (str): The ID of the training job.
@@ -124,64 +122,56 @@ def job_status(job_id: str):
     return JOBS[job_id]
 
 
-@app.post("/predict-sentiment")
-async def predict_sentiments(model_name: str, payload: dict):
-    """Endpoint to predict sentiments using a specified trained model.
+@app.post("/predict-sentiment", response_model=SentimentResponse)
+async def predict_sentiments(request: SentimentRequest):
+    """Endpoint to predict sentiments using a trained model.
     Args:
-        model_name (str): Name of the trained model to use.
-        payload (dict): Input data for prediction.
+        request (SentimentRequest): Pydantic model containing model name and text.
         Returns:
-        dict: Prediction results.
+        SentimentResponse: Pydantic model containing prediction results.
     """
-
-    if not model_name:
+    if not request.model_name:
         raise HTTPException(status_code=500, detail=f"No model name.")
 
-    if not payload:
-        raise HTTPException(status_code=500, detail=f"No payload sent.")
+    if not request.text:
+        raise HTTPException(status_code=500, detail=f"No text sent.")
 
-    trained_model = get_trained_model(model_name)
+    trained_model = retrieve_trained_model(request.model_name)
     if not trained_model:
-        logger.warning(f"Model {model_name} not found!")
-        raise HTTPException(status_code=500, detail=f"Model {model_name} not found!")
+        logger.warning(f"Model {request.model_name} not found!")
+        raise HTTPException(
+            status_code=500, detail=f"Model {request.model_name} not found!"
+        )
 
-    result = process_payload(trained_model, payload)
-    return result
+    result = await run_in_threadpool(process_payload, trained_model, request.text)
+    return SentimentResponse(result)
 
 
 @app.get("/trained-models")
-def get_latest_models(db: Session = Depends(get_db)):
-    """Endpoint to retrieve a list of all trained models from the database.
-    trained_models = list_ trained_models(db)
-    Args:
-        db (Session): Database session dependency.
-        Returns:
-        list: List of trained models.
+async def get_latest_models(db: Session = Depends(get_db)):
     """
-    trained_models = list_trained_models(db)
-    result = [m.to_dict() for m in trained_models]
+    Async endpoint to retrieve a list of all trained models from the database.
+    """
+    result = await run_in_threadpool(get_list_of_trained_models, db)
     return result
 
 
 @app.delete("/delete-model/{model_id}")
-def delete_model(model_id: int, db: Session = Depends(get_db)):
-    """Endpoint to delete a trained model from the database.
-    Args:
-        model_id (int): ID of the trained model to be deleted.
-        db (Session): Database session dependency.
-        Returns:
-        dict: Confirmation message.
+async def delete_model(model_id: int, db: Session = Depends(get_db)):
     """
-    trained_model = get_trained_model(db, model_id)
+    Endpoint to delete a trained model from the database.
+    """
+    trained_model = await run_in_threadpool(get_trained_model, db, model_id)
     if not trained_model:
         raise HTTPException(
             status_code=404, detail=f"Trained model with ID {model_id} not found."
         )
 
-    model_deleted = delete_trained_model(db, trained_model)
+    model_deleted = await run_in_threadpool(delete_trained_model, db, trained_model)
     if not model_deleted:
         raise HTTPException(
-            status_code=404, detail=f"Trained model with ID {model_id} can not deleted."
+            status_code=404,
+            detail=f"Trained model with ID {model_id} cannot be deleted.",
         )
 
     remove_trained_model(trained_model.model_name)
@@ -190,31 +180,28 @@ def delete_model(model_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/uploaded-files")
-def get_uploaded_files(db: Session = Depends(get_db)):
+async def get_uploaded_files(db: Session = Depends(get_db)):
     """Endpoint to retrieve a list of all uploaded files from the database.
     Args:
         db (Session): Database session dependency.
         Returns:
         list: List of uploaded files.
     """
-    uploaded_files = list_fileinfo(db)
-    result = [m.to_dict() for m in uploaded_files]
+    result = await run_in_threadpool(list_of_uploaded_files, db)
     return result
 
 
 @app.delete("/delete-file/{file_id}")
-def delete_file(file_id: str, db: Session = Depends(get_db)):
-    """Endpoint to delete a file and its associated comments from the database.
-    Args:
-        file_id (str): ID of the file to be deleted.
-        db (Session): Database session dependency.
-        Returns:
-        dict: Confirmation message.
+async def delete_file(file_id: str, db: Session = Depends(get_db)):
     """
-    file_deleted = delete_fileinfo(db, file_id)
+    Async endpoint to delete a file and its associated comments from the database.
+    """
+
+    file_deleted = await run_in_threadpool(delete_fileinfo, db, file_id)
+
     if not file_deleted:
         raise HTTPException(
-            status_code=404, detail=f"File with ID {file_id} can not deleted."
+            status_code=404, detail=f"File with ID {file_id} cannot be deleted."
         )
 
     return {"detail": f"File with ID {file_id} and its comments have been deleted."}
@@ -247,14 +234,10 @@ def get_comments(file_id: Optional[str] = None, db: Session = Depends(get_db)):
 
 
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request, db: Session = Depends(get_db)):
-    """Renders the home page with dynamic data such as school years, semesters,
+async def home(request: Request, db: Session = Depends(get_db)):
+    """
+    Renders the home page with dynamic data such as school years, semesters,
     default model name, supported classifiers, and trained models.
-    Args:
-        request (Request): FastAPI request object.
-        db (Session): Database session dependency.
-        Returns:
-        HTMLResponse: Rendered HTML page.
     """
     school_years = helper.generate_school_years()
     semesters = helper.generate_semesters()
@@ -262,8 +245,7 @@ def home(request: Request, db: Session = Depends(get_db)):
     supported_classifiers = list(SUPPORTED_CLASSIFIERS.keys())
     default_classifier = DEFAULT_CLASSIFIER
 
-    trained_models = list_trained_models(db)
-    models = [m.to_dict() for m in trained_models]
+    models = await run_in_threadpool(get_list_of_trained_models, db)
 
     return templates.TemplateResponse(
         "index.html",

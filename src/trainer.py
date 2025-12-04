@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from src import (
+    BATCH_SIZE,
     DEFAULT_CLASSIFIER,
     JOBS,
     LOGISTIC_REGRESSION_MODEL,
@@ -28,11 +29,11 @@ from src.helper import (
     save_trained_model,
     update_job,
 )
-from src.model.logistic_regression import (
+from src.classifiers.logistic_regression import (
     create_logistic_regression,
     train_logistic_regression,
 )
-from src.model.sgd_classifier import get_model, train_sgd_classifier
+from src.classifiers.sgd_classifier import get_model, train_sgd_classifier
 
 
 def perform_embedding(job_id, comments):
@@ -48,7 +49,7 @@ def perform_embedding(job_id, comments):
         )
         raise
 
-    batch_size = 64
+    batch_size = BATCH_SIZE
     embeddings_list = []
 
     try:

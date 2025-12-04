@@ -180,3 +180,50 @@ button:disabled {
   font-size: 13px;
   color: #555;
 }
+
+/* Strict layout for the table */
+.strict-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.strict-table th,
+.strict-table td {
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; /* Default: keep all columns single-line */
+}
+
+/* Allow multi-line wrapping ONLY in the Remarks column */
+.strict-table td.multiline,
+.strict-table th.multiline {
+  white-space: normal; /* allow wrapping */
+  overflow: visible; /* let full text show inside cell */
+  text-overflow: initial;
+  word-wrap: break-word;
+}
+
+/* Tooltip effect */
+.tooltip {
+  position: relative;
+  cursor: pointer;
+}
+
+.tooltip:hover::after {
+  content: attr(data-fulltext);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background: #333;
+  color: white;
+  padding: 6px 10px;
+  font-size: 13px;
+  max-width: 300px;
+  white-space: normal; /* tooltip can wrap text */
+  border-radius: 6px;
+  z-index: 20;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}

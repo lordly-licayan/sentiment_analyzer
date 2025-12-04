@@ -15,7 +15,9 @@ def get_fileinfo(db: Session, file_id: str):
 
 
 def list_fileinfo(db: Session):
-    return db.query(models.FileInfo).all()
+    return (
+        db.query(models.FileInfo).order_by(models.FileInfo.date_uploaded.desc()).all()
+    )
 
 
 def update_fileinfo(db: Session, file_id: str, update_data: schemas.FileInfoCreate):

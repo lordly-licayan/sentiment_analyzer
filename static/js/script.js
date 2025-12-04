@@ -71,8 +71,8 @@ async function viewTrainedModels() {
                       <div>
                         <button class="btn btn-delete" onclick="deleteModel('${
                           m.id
-                        }')">
-                        Delete
+                        }', this)">
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -305,18 +305,33 @@ async function viewUploadedFiles() {
       tbody.innerHTML += `
         <tr>
           <td>${counter++}</td>
-          <td>${m.filename}</td>
+          <td class="multiline">
+            <div class="tooltip" data-fulltext="${m.filename}">
+              ${m.filename}
+            </div>
+          </td>
           <td>${m.no_of_data}</td>
-          <td>${m.date_uploaded}</td>
-          <td>${m.remarks ?? ""}</td>
+          <td>
+            <div class="tooltip" data-fulltext="${m.date_uploaded}">
+              ${m.date_uploaded}
+            </div>
+          </td>
+          <td class="multiline">
+            <div class="tooltip" data-fulltext="${m.remarks ?? ""}">
+              ${m.remarks ?? ""}
+            </div>
+          </td>
           <td>
           <div>
-            <button class="btn btn-view" onclick="openCommentsTab('${
+            <button id='${
               m.file_id
-            }')">
+            }' class="btn btn-view" onclick="openCommentsTab('${m.file_id}')">
             Comments
             </button>
-            <button class="btn btn-delete" onclick="deleteFile('${m.file_id}')">
+            <br/>
+            <button class="btn btn-delete" onclick="deleteFile('${
+              m.file_id
+            }', this)">
             Delete
             </button>
           </div>
@@ -393,75 +408,102 @@ async function viewPlayground() {
     return;
   }
 
-  // Get the select element
   const selectElement = document.getElementById("model-select");
 
-  // Populate only with model_name
-  models
-    .map((model) => {
-      const option = document.createElement("option");
-      option.value = model.model_name;
-      option.textContent = `${model.model_name} (${model.classifier} - ${model.accuracy}% accuracy)`;
-      return option;
-    })
-    .forEach((option) => selectElement.appendChild(option));
+  // Clear existing options
+  selectElement.innerHTML = "";
+
+  // Append fresh options
+  models.forEach((model) => {
+    const option = document.createElement("option");
+    option.value = model.model_name;
+    option.textContent = `${model.model_name} (${model.classifier} - ${model.accuracy}% accuracy)`;
+    selectElement.appendChild(option);
+  });
 }
 
 async function get_sentiments() {
-  const model_name = document.getElementById("model-select").value.trim();
-  const comments = document.getElementById("comments-box").value.trim();
+  const modelSelect = document.getElementById("model-select");
+  const commentsBox = document.getElementById("comments-box");
+  const sentimentDisplay = document.getElementById("sentiment-result");
+  const spinner = document.getElementById("sentiment-spinner");
+  const sentimentBtn = document.getElementById("sentiment-btn");
+
+  const model_name = modelSelect.value.trim();
+  const comments = commentsBox.value.trim();
 
   if (!model_name) {
     alert("Please choose a model name.");
-  } else if (!comments) {
-    alert("Please write a comment first.");
+    return;
   }
-  const sentiment_display = document.getElementById("sentiment-result");
-  const spinner = document.getElementById("sentiment-spinner");
 
-  sentiment_display.innerHTML = "";
+  if (!comments) {
+    alert("Please write a comment first.");
+    return;
+  }
+
+  // Disable button while processing
+  sentimentBtn.disabled = true;
+
+  // Prepare display
+  sentimentDisplay.style.maxHeight = "300px";
+  sentimentDisplay.style.overflowY = "auto";
+  sentimentDisplay.innerHTML = "";
   spinner.style.display = "block";
 
-  const res = await fetch(`/predict-sentiment?model_name=${model_name}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: comments }),
-  });
+  const payload = { model_name, text: comments };
 
-  if (!res.ok) {
-    spinner.style.display = "none";
-    throw new Error("Failed to fetch /predict-sentiment.");
-  }
+  try {
+    const res = await fetch(`/predict-sentiment?model_name=${model_name}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  const data = await res.json();
-  console.log(data);
+    if (!res.ok) {
+      const errorText = await res.text();
+      sentimentDisplay.innerHTML = `Error: ${errorText}`;
+      throw new Error("Failed to fetch /predict-sentiment.");
+    }
 
-  spinner.style.display = "none";
+    const data = await res.json();
 
-  for (const [comment, item] of Object.entries(data)) {
-    const color =
-      item.sentiment === "positive"
-        ? "blue"
-        : sentiment === "negative"
-        ? "red"
-        : "black";
+    let counter = 1;
+    for (const [comment, item] of Object.entries(data.sentiments || data)) {
+      const color =
+        item.sentiment === "positive"
+          ? "blue"
+          : item.sentiment === "negative"
+          ? "red"
+          : "black";
 
-    sentiment_display.innerHTML += `
-      <div style="font-size: 15px; margin-bottom: 8px;">
-        ${comment} → <span style="color: ${color};">${item.sentiment}</span>
-        <br/>
-        <span style="font-size: 15px; color: #0f4404ff">Categories:</span>
-        <br/>
-        <div style="margin-left: 15px; font-size: 12px;;">
-          ${Object.entries(item.category)
-            .map(([cat, score]) => `${cat}: ${score.toFixed(4)}`)
-            .join(", ")}
+      sentimentDisplay.innerHTML += `
+        <div style="font-size: 15px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #ddd;">
+          <span>${counter}. </span> ${comment} → <span style="color: ${color}; font-weight: bold;">${
+        item.sentiment
+      }</span>
+          <br/>
+          <span style="font-size: 14px; color: #0f4404ff;">Categories:</span>
+          <br/>
+          <div style="margin-left: 15px; font-size: 12px;">
+            ${Object.entries(item.category)
+              .map(([cat, score]) => `${cat}: ${score}%`)
+              .join(", ")}
+          </div>
         </div>
-      </div>
-    `;
+      `;
+      counter++;
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    // Re-enable button and hide spinner
+    sentimentBtn.disabled = false;
+    spinner.style.display = "none";
   }
 }
 
+/* ----- COMMENT SEARCH ----- */
 document
   .getElementById("comment-search")
   .addEventListener("input", function () {
@@ -474,37 +516,69 @@ document
     });
   });
 
-function deleteModel(model_id) {
-  if (confirm("Are you sure you want to delete this model?")) {
-    fetch(`/delete-model/${model_id}`, { method: "DELETE" })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to delete model.");
-        }
-        alert("Model deleted successfully.");
-        viewTrainedModels();
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Error deleting model.");
-      });
+async function deleteModel(model_id, button) {
+  if (!confirm("Are you sure you want to delete this model?")) return;
+
+  // Save original button content
+  const originalContent = button.innerHTML;
+
+  // Show spinner inside the button
+  button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...`;
+  button.disabled = true;
+
+  try {
+    const res = await fetch(`/delete-model/${model_id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete model.");
+
+    // Remove the row from the table
+    const row = button.closest("tr");
+    if (row) row.remove();
+
+    // Optionally, refresh the table instead:
+    // await viewTrainedModels();
+  } catch (err) {
+    console.error(err);
+    alert("Error deleting model.");
+
+    // Restore original button
+    button.innerHTML = originalContent;
+    button.disabled = false;
   }
 }
 
-function deleteFile(file_id) {
-  if (confirm("Are you sure you want to delete this file?")) {
-    fetch(`/delete-file/${file_id}`, { method: "DELETE" })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to delete file.");
-        }
-        alert("File deleted successfully.");
-        viewUploadedFiles();
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Error deleting file.");
-      });
+async function deleteFile(file_id, button) {
+  if (!confirm("Are you sure you want to delete this file?")) return;
+
+  const commentBtn = document.getElementById(file_id);
+  commentBtn.disabled = true;
+
+  // Save original button content
+  const originalContent = button.innerHTML;
+
+  // Show inline spinner
+  button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...`;
+  button.disabled = true;
+
+  try {
+    const res = await fetch(`/delete-file/${file_id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete file.");
+
+    alert("File deleted successfully.");
+
+    // Remove the row from the table (optional: faster than refreshing the whole table)
+    const row = button.closest("tr");
+    if (row) row.remove();
+
+    // Or, if you prefer, refresh the list:
+    // await viewUploadedFiles();
+  } catch (err) {
+    console.error(err);
+    alert("Error deleting file.");
+
+    // Restore original button if deletion fails
+    button.innerHTML = originalContent;
+    button.disabled = false;
+    commentBtn.disabled = false;
   }
 }
 

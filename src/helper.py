@@ -5,6 +5,7 @@ import os
 import re
 import logging
 
+import anyio
 import joblib
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
@@ -21,8 +22,9 @@ from uuid import uuid4
 
 
 from src.db.crud.comments import create_comments
-from src.db.crud.fileinfo import create_fileinfo
-from src.db.crud.trainedmodel import create_trained_model
+from src.db.crud.fileinfo import create_fileinfo, list_fileinfo
+from src.db.crud.trainedmodel import create_trained_model, list_trained_models
+from src.db.database import get_db
 from src.db.schemas import CommentBase, FileInfoBase, TrainedModelBase
 
 # -----------------------------------------------------------
@@ -124,8 +126,6 @@ def process_data(df: pd.DataFrame):
 
         # --- Store valid row ---
         data[comment] = label
-        # comments.append(comment)
-        # labels.append(label)
 
     # If absolutely no valid rows exist, raise an error
     if len(data) == 0:
@@ -330,7 +330,7 @@ def save_trained_model(
     create_trained_model(db, trained_model)
 
 
-def get_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
+def retrieve_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
     """
     Load the trained model from Google Cloud Storage.
     """
@@ -347,7 +347,7 @@ def sort_scores(scores: dict) -> dict:
     return dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
 
 
-def process_payload(trained_model, payload: str):
+def process_payload(trained_model, text: str):
     """
     Get sentiments for the given payload using the trained model.
     Args:
@@ -356,7 +356,6 @@ def process_payload(trained_model, payload: str):
         Returns:
         dict: Mapping of comment to predicted sentiment label
     """
-    text = payload["text"]
     lines = [l.strip() for l in text.split("\n") if l.strip()]
 
     data = {}
@@ -364,7 +363,6 @@ def process_payload(trained_model, payload: str):
     category_embeddings = embedder.encode(
         TEACHER_EVALUATION_CATEGORIES, convert_to_tensor=True
     )
-    print(TEACHER_EVALUATION_CATEGORIES)
 
     for line in lines:
         comment_embedding = embedder.encode([line], convert_to_numpy=True)
@@ -382,16 +380,15 @@ def process_payload(trained_model, payload: str):
         sentiment = trained_model.predict(comment_embedding)[0]
         data[line] = {
             "sentiment": str(sentiment),
-            "probs": probs.tolist(),
             "category": sort_scores(
                 {
-                    TEACHER_EVALUATION_CATEGORIES[i]: round(float(scores[i]), 2)
+                    TEACHER_EVALUATION_CATEGORIES[i]: round(float(scores[i] * 100), 2)
                     for i in range(len(TEACHER_EVALUATION_CATEGORIES))
                 }
             ),
         }
 
-    print(data)
+    # logger.info(data)
     return data
 
 
@@ -407,3 +404,22 @@ def remove_trained_model(
         logger.info(f"Model {model_name} removed from {model_dir}")
     else:
         logger.warning(f"Model {model_name} not found in {model_dir}")
+
+
+def get_list_of_trained_models(db):
+    trained_models = list_trained_models(db)
+    result = [m.to_dict() for m in trained_models]
+    return result
+
+
+def list_of_uploaded_files(db):
+    """
+    Retrieve a list of uploaded files from the database.
+    Args:
+        db: Database session
+        Returns:
+        list: List of file information dictionaries
+    """
+    uploaded_files = list_fileinfo(db)
+    result = [m.to_dict() for m in uploaded_files]
+    return result
