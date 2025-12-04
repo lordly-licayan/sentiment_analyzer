@@ -30,6 +30,7 @@ from src import (
 from src.db.crud.comments import (
     list_comments_by_file,
     list_last_comments,
+    paginate_comments,
 )
 from src.db.crud.fileinfo import delete_fileinfo, get_fileinfo, list_fileinfo
 from src.db.crud.trainedmodel import (
@@ -207,15 +208,13 @@ async def delete_file(file_id: str, db: Session = Depends(get_db)):
     return {"detail": f"File with ID {file_id} and its comments have been deleted."}
 
 
-@app.get("/comments")
-def get_comments(file_id: Optional[str] = None, db: Session = Depends(get_db)):
-    """Endpoint to retrieve comments, optionally filtered by file ID.
-    Args:
-        file_id (Optional[str]): ID of the file to filter comments.
-        db (Session): Database session dependency.
-        Returns:
-        list: List of comments.
-    """
+@app.get("/comments-paging")
+async def get_comments_paging(
+    file_id: Optional[str] = None,
+    cursor: int | None = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
     filename = None
     if file_id:
         fileinfo = get_fileinfo(db, file_id)
@@ -224,11 +223,10 @@ def get_comments(file_id: Optional[str] = None, db: Session = Depends(get_db)):
                 status_code=404, detail=f"File with ID {file_id} not found."
             )
         filename = fileinfo.filename
-        comments = list_comments_by_file(db, file_id)
-    else:
-        comments = list_last_comments(db)
 
-    list_of_comments = [m.to_dict() for m in comments]
+    list_of_comments = await run_in_threadpool(
+        paginate_comments, db, file_id, limit, cursor
+    )
     result = {"filename": filename, "comments": list_of_comments}
     return result
 

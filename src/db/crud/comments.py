@@ -62,3 +62,25 @@ def delete_comment(db: Session, comment_id: int):
     db.delete(db_comment)
     db.commit()
     return True
+
+
+def paginate_comments(
+    db: Session, file_id: str = None, limit: int = 100, cursor: int = None
+):
+    if file_id:
+        query = db.query(models.Comments).filter(models.Comments.file_id == file_id)
+    else:
+        query = db.query(models.Comments)
+
+    if cursor:
+        query = query.filter(models.Comments.id < cursor)
+
+    comments = query.order_by(desc(models.Comments.id)).limit(limit).all()
+
+    # Convert ORM objects to dict
+    result = [
+        {"id": c.id, "comment": c.comment, "label": c.label, "remarks": c.remarks}
+        for c in comments
+    ]
+
+    return result

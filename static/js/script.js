@@ -1,3 +1,7 @@
+let cursor = null;
+let loading = false;
+let finished = false;
+
 /* ----- TAB NAVIGATION ----- */
 async function openTab(tabId, id = null) {
   document
@@ -28,7 +32,7 @@ async function openTab(tabId, id = null) {
   }
 
   if (tabId === "comments") {
-    await viewComments(id);
+    await viewCommentsPaging(id);
   }
 
   if (tabId === "playground") {
@@ -350,50 +354,70 @@ async function openCommentsTab(file_id) {
   openTab("comments", file_id);
 }
 
-async function viewComments(file_id = null) {
+async function viewCommentsPaging(file_id = null) {
   const tbody = document.getElementById("comments-tbody");
-  const comments_desc = document.getElementById("comments_desc");
-  tbody.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
 
-  try {
-    let res;
+  cursor = null;
+  finished = false;
+  let counter = 1;
+  tbody.innerHTML = ""; // clear previous comments
 
+  // Function to load comments
+  async function loadComments(file_id) {
+    if (loading || finished) return;
+
+    loading = true;
+
+    let url = `/comments-paging?limit=50`;
     if (file_id) {
-      res = await fetch(`/comments?file_id=${file_id}`);
-    } else {
-      res = await fetch("/comments");
-      comments_desc.innerText = `Last 100 Comments`;
+      url += `&file_id=${file_id}`;
     }
 
-    if (!res.ok) throw new Error("Failed to fetch /comments");
-
-    const result = await res.json();
-
-    if (result.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5">No comments found.</td></tr>`;
-      return;
+    if (cursor) {
+      url += `&cursor=${cursor}`;
     }
 
-    tbody.innerHTML = ""; // Clear table
-    if (file_id && result.filename) {
-      comments_desc.innerText = `Comments for File: ${result.filename}`;
-    }
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
 
-    let counter = 1;
-    result.comments.forEach((m) => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${counter++}</td>
-          <td>${m.comment}</td>
-          <td>${m.label}</td>
-          <td>${m.remarks ?? ""}</td>
-        </tr>
-      `;
-    });
-  } catch (err) {
-    console.error(err);
-    tbody.innerHTML = `<tr><td colspan="5">Error loading comments.</td></tr>`;
+      if (data.comments.length === 0) {
+        finished = true; // no more comments
+        return;
+      }
+
+      data.comments.forEach((m) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${counter++}</td>
+            <td>${m.comment}</td>
+            <td>${m.label}</td>
+            <td>${m.remarks ?? ""}</td>
+          </tr>
+        `;
+      });
+
+      // Update cursor to the last comment's ID
+      cursor = data.comments[data.comments.length - 1].id;
+    } catch (err) {
+      console.error("Failed to load comments:", err);
+    } finally {
+      loading = false;
+    }
   }
+
+  // Scroll listener for infinite scrolling
+  window.addEventListener("scroll", () => {
+    if (
+      window.innerHeight + window.scrollY >=
+      document.body.offsetHeight - 100
+    ) {
+      loadComments(file_id);
+    }
+  });
+
+  // Initial load
+  loadComments(file_id);
 }
 
 /* ----- VIEW PLAYGROUND ----- */
