@@ -27,7 +27,7 @@ def train_logistic_regression(
         report: Classification report dictionary
     """
 
-    logger.info("Training LogisticRegression model.")
+    logger.info("Training using LogisticRegression model.")
     update_job(
         job_id,
         status="Training",
@@ -75,10 +75,8 @@ def train_logistic_regression(
 
     update_job(
         job_id,
-        status="Complete",
-        progress="100%",
         accuracy=f"{accuracy:.2f}%",
-        message="Training complete.",
+        message="Done training logistic regression model.",
         report=report,
     )
     return report, accuracy

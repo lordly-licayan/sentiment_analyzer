@@ -1,15 +1,10 @@
-from google.cloud import storage
 from google.api_core.exceptions import NotFound
 from urllib.parse import urlparse
 from datetime import timedelta
 
-from google.oauth2 import service_account
+from managers import BUCKET_NAME, get_storage_client
 
-from managers import BUCKET_NAME, STORAGE_KEY_FILE
-
-credentials = service_account.Credentials.from_service_account_file(STORAGE_KEY_FILE)
-
-storage_client = storage.Client(credentials=credentials)
+storage_client = get_storage_client()
 
 
 def get_blob_uri(bucket_name, object_name):

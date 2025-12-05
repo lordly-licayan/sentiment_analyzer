@@ -40,7 +40,6 @@ from src.classifiers.logistic_regression import (
 )
 from src.classifiers.sgd_classifier import (
     create_SGD_classifier,
-    get_model,
     train_sgd_classifier,
 )
 

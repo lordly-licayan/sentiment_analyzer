@@ -57,6 +57,13 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
         report: Classification report on validation set
     """
 
+    logger.info("Training using SGDClassifier model.")
+    update_job(
+        job_id,
+        status="Training",
+        message=f"Training {X.shape[0]} data using SGDClassifier...",
+    )
+
     # Split into training and validation
     X_train, X_val, y_train, y_val = train_test_split(
         X, y, test_size=test_size, random_state=42, stratify=y
@@ -74,7 +81,6 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
     logger.info(f"Job {job_id}: Starting training for {epochs} epochs.")
     update_job(
         job_id,
-        status="Training",
         message="Starting training for {epochs} epochs.",
     )
 
@@ -126,10 +132,8 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
 
     update_job(
         job_id,
-        status="Complete",
-        progress="100%",
         accuracy=f"{accuracy:.2f}%",
-        message="Training complete.",
+        message="Done training SGD Classifier model.",
         report=report,
     )
 

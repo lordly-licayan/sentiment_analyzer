@@ -21,7 +21,6 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 import uvicorn
-from managers.storage_manager import upload
 from model.pydantic_model import SentimentRequest, SentimentResponse
 from src import (
     DEFAULT_CLASSIFIER,
@@ -29,11 +28,9 @@ from src import (
     SUPPORTED_CLASSIFIERS,
 )
 from src.db.crud.comments import (
-    list_comments_by_file,
-    list_last_comments,
     paginate_comments,
 )
-from src.db.crud.fileinfo import delete_fileinfo, get_fileinfo, list_fileinfo
+from src.db.crud.fileinfo import delete_fileinfo, get_fileinfo
 from src.db.crud.trainedmodel import (
     delete_trained_model,
     get_trained_model,

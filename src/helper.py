@@ -6,7 +6,6 @@ import os
 import re
 import logging
 
-import anyio
 import joblib
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
@@ -27,7 +26,6 @@ from uuid import uuid4
 from src.db.crud.comments import create_comments
 from src.db.crud.fileinfo import create_fileinfo, list_fileinfo
 from src.db.crud.trainedmodel import create_trained_model, list_trained_models
-from src.db.database import get_db
 from src.db.schemas import CommentBase, FileInfoBase, TrainedModelBase
 
 # -----------------------------------------------------------
@@ -73,8 +71,6 @@ def process_data(df: pd.DataFrame):
     if "comment" not in df.columns or "label" not in df.columns:
         raise ValueError("CSV must contain 'comment' and 'label' columns.")
 
-    # comments = []
-    # labels = []
     data = {}
     errors = []
 
