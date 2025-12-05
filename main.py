@@ -21,6 +21,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 import uvicorn
+from managers.storage_manager import upload
 from model.pydantic_model import SentimentRequest, SentimentResponse
 from src import (
     DEFAULT_CLASSIFIER,
@@ -95,10 +96,9 @@ async def train_model(
     job_id = create_job()
 
     try:
-        raw = await file.read()
-        file_id = get_file_hash(raw)
-
-        df = pd.read_csv(StringIO(raw.decode("utf-8", errors="ignore")))
+        content = await file.read()
+        file_id = get_file_hash(content)
+        df = pd.read_csv(StringIO(content.decode("utf-8", errors="ignore")))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading uploaded file: {e}")
 
@@ -175,9 +175,9 @@ async def delete_model(model_id: int, db: Session = Depends(get_db)):
             detail=f"Trained model with ID {model_id} cannot be deleted.",
         )
 
-    remove_trained_model(trained_model.model_name)
+    is_deleted = remove_trained_model(trained_model.model_name)
 
-    return {"detail": f"Trained model with ID {model_id} has been deleted."}
+    return {"detail": is_deleted}
 
 
 @app.get("/uploaded-files")

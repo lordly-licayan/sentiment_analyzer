@@ -28,16 +28,6 @@ def create_SGD_classifier():
     return clf
 
 
-def get_model(model_name: str):
-
-    model_path = os.path.join(TRAINED_MODEL_DIR, model_name)
-    if os.path.exists(model_path):
-        clf = joblib.load(model_path)
-    else:
-        clf = create_SGD_classifier()
-    return clf
-
-
 def calculate_epochs(n_samples: int) -> int:
     """
     Automatically adjust number of epochs based on dataset size

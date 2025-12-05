@@ -368,7 +368,7 @@ async function viewCommentsPaging(file_id = null) {
 
     loading = true;
 
-    let url = `/comments-paging?limit=50`;
+    let url = `/comments-paging?limit=20`;
     if (file_id) {
       url += `&file_id=${file_id}`;
     }

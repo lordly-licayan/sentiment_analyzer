@@ -33,4 +33,6 @@ TEACHER_EVALUATION_CATEGORIES = os.getenv("TEACHER_EVALUATION_CATEGORIES", "").s
     ", "
 )
 
+SAVE_TO_CLOUD_STORAGE = os.getenv("SAVE_TO_CLOUD_STORAGE", "False").lower() == "true"
+
 JOBS = {}  # In-memory job store

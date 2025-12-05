@@ -4,10 +4,12 @@ import traceback
 import numpy as np
 import pandas as pd
 
+from managers.storage_manager import upload
 from src import (
     BATCH_SIZE,
     DEFAULT_CLASSIFIER,
     JOBS,
+    LABEL_MAP,
     LOGISTIC_REGRESSION_MODEL,
     SUPPORTED_CLASSIFIERS,
 )
@@ -24,16 +26,23 @@ from src.helper import (
     process_data,
     get_embedder,
     convert_label_to_sentiment,
+    retrieve_trained_model,
     save_comments,
     save_file_info,
     save_trained_model,
     update_job,
+    validate_comment_labels,
+    validate_label_sentiments,
 )
 from src.classifiers.logistic_regression import (
     create_logistic_regression,
     train_logistic_regression,
 )
-from src.classifiers.sgd_classifier import get_model, train_sgd_classifier
+from src.classifiers.sgd_classifier import (
+    create_SGD_classifier,
+    get_model,
+    train_sgd_classifier,
+)
 
 
 def perform_embedding(job_id, comments):
@@ -110,7 +119,9 @@ def perform_training(job_id, model_name, classifier_model, X_train, y_train):
         clf = create_logistic_regression()
         report, accuracy = train_logistic_regression(job_id, clf, X_train, y_train)
     else:
-        clf = get_model(model_name)
+        clf = retrieve_trained_model(model_name)
+        if not clf:
+            clf = create_SGD_classifier()
         report, accuracy = train_sgd_classifier(job_id, clf, X_train, y_train)
     return clf, report, accuracy
 
@@ -135,6 +146,7 @@ async def process_data_and_train(
     logger.info(f"[{job_id}] Background task started.")
 
     try:
+
         db = next(get_db())
 
         update_job(
@@ -159,21 +171,20 @@ async def process_data_and_train(
                 )
                 return
 
-        logger.info(f"[{job_id}] Decoding CSV bytes")
-
         logger.info(f"[{job_id}] CSV loaded | Rows: {len(df)}")
 
-        # Check if file already used for training
-        if get_fileinfo(db, file_id):
-            update_job(
-                job_id,
-                status="Error",
-                message=f"File {filename} already used for training. You can delete the file for retraining.",
-            )
-            return
+        # if get_fileinfo(db, file_id):
+        #     update_job(
+        #         job_id,
+        #         status="Error",
+        #         message=f"File {filename} already used for training. You can delete the file for retraining.",
+        #     )
+        #     return
 
         result, errors = process_data(df)
         new_comments, new_labels = dict_to_lists(result)
+
+        all_comments, all_labels = new_comments, new_labels
         no_of_new_comments = len(new_comments)
 
         if no_of_new_comments == 0:
@@ -185,12 +196,18 @@ async def process_data_and_train(
             logger.info(f"[{job_id}] Data processing errors: {errors}")
             update_job(job_id, feedback=f"{errors}")
 
-        # retrieve comments from the database
-        retrieved_comments = list_all_comments(db)
+        # Retrieve existing comments if logistic regression
+        if classifier_model == LOGISTIC_REGRESSION_MODEL:
+            # retrieve comments from the database
+            retrieved_comments = list_all_comments(db)
 
-        # combine retrieved comments and the new comments
-        combined_comments = {m.comment: m.label for m in retrieved_comments} | result
-        all_comments, all_labels = dict_to_lists(combined_comments)
+            # combine retrieved comments and the new comments
+            combined_comments = {
+                m.comment: m.label for m in retrieved_comments
+            } | result
+            all_comments, all_labels = dict_to_lists(combined_comments)
+
+            validate_comment_labels(combined_comments, all_comments, all_labels)
 
         # get the equivalent sentiments for the labels
         sentiments = convert_label_to_sentiment(all_labels)
@@ -219,11 +236,16 @@ async def process_data_and_train(
         # ---------------------------------------
         # Save model and other information
         # ---------------------------------------
-        save_file_info(db, file_id, filename, no_of_new_comments, errors)
+        # Check if file already used for training
+        file_already_used = get_fileinfo(db, file_id)
+        if not file_already_used:
+            validate_label_sentiments(LABEL_MAP, new_comments, new_labels, sentiments)
 
-        save_comments(db, file_id, new_comments, new_labels, sentiments)
+            save_file_info(db, file_id, filename, no_of_new_comments, errors)
+            save_comments(db, file_id, new_comments, new_labels, sentiments)
 
         remarks = f"Model is trained by {classifier_model} with {accuracy}% accuracy."
+
         save_trained_model(
             db, clf, data, round(accuracy, 2), no_of_trained_data, remarks, model_name
         )

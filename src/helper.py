@@ -1,6 +1,7 @@
 import base64
 from datetime import datetime
 import hashlib
+import io
 import os
 import re
 import logging
@@ -9,12 +10,14 @@ import anyio
 import joblib
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
+from managers.storage_manager import delete_blob, read_file_from_gcs, upload
 from src import (
     DEFAULT_TRAINED_MODEL_NAME,
     EMBEDDER_MODEL,
     HUGGINGFACE_HUB_TOKEN,
     JOBS,
     LABEL_MAP,
+    SAVE_TO_CLOUD_STORAGE,
     TEACHER_EVALUATION_CATEGORIES,
     TRAINED_MODEL_DIR,
 )
@@ -166,6 +169,66 @@ def convert_label_to_sentiment(labels: list, label_map=LABEL_MAP):
     return sentiments
 
 
+def validate_label_sentiments(
+    data: dict, comments: list, labels: list, sentiments: list
+):
+    """
+    Validate that each numeric label maps correctly to its sentiment string,
+    using the provided data mapping. Raises ValueError on mismatch.
+    """
+
+    if len(labels) != len(sentiments):
+        raise ValueError("Length of labels and sentiments must be equal.")
+
+    # Reverse the mapping: numeric → text
+    reverse_map = {v: k for k, v in data.items()}
+
+    for idx, (label, sentiment) in enumerate(zip(labels, sentiments)):
+        if label not in reverse_map:
+            raise KeyError(
+                f"Comment: {comments[idx]} Label '{label}' not found in mapping at index {idx}."
+            )
+
+        mapped_sentiment = reverse_map[label]
+
+        if mapped_sentiment != sentiment:
+            raise ValueError(
+                f"Sentiment mismatch at index {idx}:\n"
+                f"  Comment: {comments[idx]}\n"
+                f"  label: {label}\n"
+                f"  expected sentiment (from mapping): '{mapped_sentiment}'\n"
+                f"  provided sentiment: '{sentiment}'"
+            )
+
+    return True  # All good
+
+
+def validate_comment_labels(data: dict, comments: list, labels: list):
+    """
+    Validate if each comment's expected label matches the value stored in data.
+    Throws ValueError when a mismatch is found.
+    """
+
+    if len(comments) != len(labels):
+        raise ValueError("Length of comments and labels must be equal.")
+
+    for idx, (comment, label) in enumerate(zip(comments, labels)):
+        if comment not in data:
+            raise KeyError(f"Comment not found in data: '{comment}' (index {idx})")
+
+        data_val = data[comment]
+
+        if data_val != label:
+            raise ValueError(
+                f"Label mismatch at index {idx}:\n"
+                f"  comment: '{comment}'\n"
+                f"  expected label: {label}\n"
+                f"  data value: {data_val}"
+            )
+
+    return True  # All matched
+
+
 def save_comments_to_csv(comments, labels, output_path="output.csv"):
     """
     Save comments and labels into a CSV file with 2 columns:
@@ -309,13 +372,20 @@ def save_trained_model(
     """
     Save the trained model to Google Cloud.
     """
-    if os.path.exists(model_dir):
-        os.makedirs(model_dir, exist_ok=True)
+    if SAVE_TO_CLOUD_STORAGE:
+        logger.info(f"Uploading model {model_name} to cloud storage...")
+        model_bytes = io.BytesIO()
+        joblib.dump(clf, model_bytes)
 
-    model_path = os.path.join(model_dir, model_name)
+        upload(model_name, model_bytes, "application/octet-stream")
+    else:
+        if os.path.exists(model_dir):
+            os.makedirs(model_dir, exist_ok=True)
 
-    joblib.dump(clf, model_path)
-    logger.info(f"Model saved to {model_path}")
+        model_path = os.path.join(model_dir, model_name)
+
+        joblib.dump(clf, model_path)
+        logger.info(f"Model saved to {model_path}")
 
     trained_model = TrainedModelBase(
         sy=data.get("sy"),
@@ -334,9 +404,33 @@ def retrieve_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
     """
     Load the trained model from Google Cloud Storage.
     """
-    model_path = os.path.join(model_dir, model_name)
-    clf = joblib.load(model_path)
+    if SAVE_TO_CLOUD_STORAGE:
+        content = read_file_from_gcs(model_name)
+        file_obj = io.BytesIO(content)
+        clf = joblib.load(file_obj)
+    else:
+        model_path = os.path.join(model_dir, model_name)
+        clf = joblib.load(model_path)
     return clf
+
+
+def remove_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
+    """
+    Remove the trained model file from local storage.
+    """
+    is_deleted = False
+
+    if SAVE_TO_CLOUD_STORAGE:
+        is_deleted = delete_blob(model_name)
+    else:
+        model_path = os.path.join(model_dir, model_name)
+        if os.path.exists(model_path):
+            os.remove(model_path)
+            is_deleted = True
+
+    logger.info(f"Model {model_name} deleted: {is_deleted}")
+
+    return is_deleted
 
 
 def sort_scores(scores: dict) -> dict:
@@ -390,20 +484,6 @@ def process_payload(trained_model, text: str):
 
     # logger.info(data)
     return data
-
-
-def remove_trained_model(
-    model_name=DEFAULT_TRAINED_MODEL_NAME, model_dir=TRAINED_MODEL_DIR
-):
-    """
-    Remove the trained model file from local storage.
-    """
-    model_path = os.path.join(model_dir, model_name)
-    if os.path.exists(model_path):
-        os.remove(model_path)
-        logger.info(f"Model {model_name} removed from {model_dir}")
-    else:
-        logger.warning(f"Model {model_name} not found in {model_dir}")
 
 
 def get_list_of_trained_models(db):
