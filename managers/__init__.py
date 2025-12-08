@@ -5,7 +5,7 @@ from google.cloud import storage
 
 load_dotenv()
 
-BUCKET_NAME = os.getenv("BUCKET_NAME", "faculytics-app-storage")
+BUCKET_NAME = os.getenv("BUCKET_NAME", "faculytics-app")
 STORAGE_KEY_FILE = os.getenv("STORAGE_KEY_FILE", "faculytics-app-storage.json")
 SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "keys.json")
 
