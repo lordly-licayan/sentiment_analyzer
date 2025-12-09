@@ -4,7 +4,7 @@ from typing import Dict
 
 class SentimentRequest(BaseModel):
     model_name: str
-    text: str
+    lines: list[str]
 
 
 class CommentCategory(RootModel[Dict[str, float]]):

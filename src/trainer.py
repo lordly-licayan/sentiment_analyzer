@@ -182,6 +182,9 @@ async def process_data_and_train(
 
         result, errors = process_data(df)
         new_comments, new_labels = dict_to_lists(result)
+        new_sentiments = convert_label_to_sentiment(new_labels)
+
+        validate_label_sentiments(LABEL_MAP, new_comments, new_labels, new_sentiments)
 
         all_comments, all_labels = new_comments, new_labels
         no_of_new_comments = len(new_comments)
@@ -209,7 +212,7 @@ async def process_data_and_train(
             validate_comment_labels(combined_comments, all_comments, all_labels)
 
         # get the equivalent sentiments for the labels
-        sentiments = convert_label_to_sentiment(all_labels)
+        all_sentiments = convert_label_to_sentiment(all_labels)
         no_of_trained_data = len(all_comments)
 
         # ---------------------------------------
@@ -222,7 +225,7 @@ async def process_data_and_train(
             message="Embedding the dataset started...",
         )
         X_train = perform_embedding(job_id, all_comments)
-        y_train = np.array(sentiments)
+        y_train = np.array(all_sentiments)
 
         # ---------------------------------------
         # Train model
@@ -238,10 +241,12 @@ async def process_data_and_train(
         # Check if file already used for training
         file_already_used = get_fileinfo(db, file_id)
         if not file_already_used:
-            validate_label_sentiments(LABEL_MAP, new_comments, new_labels, sentiments)
+            validate_label_sentiments(
+                LABEL_MAP, all_comments, all_labels, all_sentiments
+            )
 
             save_file_info(db, file_id, filename, no_of_new_comments, errors)
-            save_comments(db, file_id, new_comments, new_labels, sentiments)
+            save_comments(db, file_id, new_comments, new_labels, new_sentiments)
 
         remarks = f"Model is trained by {classifier_model} with {accuracy}% accuracy."
 

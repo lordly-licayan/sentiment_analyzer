@@ -475,7 +475,11 @@ async function get_sentiments() {
   sentimentDisplay.innerHTML = "";
   spinner.style.display = "block";
 
-  const payload = { model_name, text: comments };
+  const lines = comments
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+  const payload = { model_name, lines: lines };
 
   try {
     const res = await fetch(`/predict-sentiment?model_name=${model_name}`, {

@@ -9,7 +9,12 @@ import logging
 import joblib
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
-from managers.storage_manager import delete_blob, read_file_from_gcs, upload
+from managers.storage_manager import (
+    delete_blob,
+    file_exists,
+    read_file_from_gcs,
+    upload,
+)
 from src import (
     DEFAULT_TRAINED_MODEL_NAME,
     EMBEDDER_MODEL,
@@ -401,11 +406,17 @@ def retrieve_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
     Load the trained model from Google Cloud Storage.
     """
     if SAVE_TO_CLOUD_STORAGE:
+        if not file_exists(model_name):
+            raise FileNotFoundError(f"Model {model_name} not found in cloud storage.")
+
         content = read_file_from_gcs(model_name)
         file_obj = io.BytesIO(content)
         clf = joblib.load(file_obj)
     else:
         model_path = os.path.join(model_dir, model_name)
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file {model_path} not found.")
+
         clf = joblib.load(model_path)
     return clf
 
@@ -437,7 +448,7 @@ def sort_scores(scores: dict) -> dict:
     return dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
 
 
-def process_payload(trained_model, text: str):
+def process_payload(trained_model, lines: list):
     """
     Get sentiments for the given payload using the trained model.
     Args:
@@ -446,7 +457,6 @@ def process_payload(trained_model, text: str):
         Returns:
         dict: Mapping of comment to predicted sentiment label
     """
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
 
     data = {}
     embedder = get_embedder()
@@ -454,8 +464,10 @@ def process_payload(trained_model, text: str):
         TEACHER_EVALUATION_CATEGORIES, convert_to_tensor=True
     )
 
+    lines = list(set(lines))
+
     for line in lines:
-        comment_embedding = embedder.encode([line], convert_to_numpy=True)
+        comment_embedding = embedder.encode([line.strip()], convert_to_numpy=True)
 
         probs = trained_model.predict_proba(comment_embedding)
         logger.info(f"Predicted probabilities for line '{line}': {probs}")

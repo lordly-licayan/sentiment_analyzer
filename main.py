@@ -131,8 +131,8 @@ async def predict_sentiments(request: SentimentRequest):
     if not request.model_name:
         raise HTTPException(status_code=500, detail=f"No model name.")
 
-    if not request.text:
-        raise HTTPException(status_code=500, detail=f"No text sent.")
+    if not request.lines:
+        raise HTTPException(status_code=500, detail=f"No lines sent.")
 
     trained_model = retrieve_trained_model(request.model_name)
     if not trained_model:
@@ -141,7 +141,7 @@ async def predict_sentiments(request: SentimentRequest):
             status_code=500, detail=f"Model {request.model_name} not found!"
         )
 
-    result = await run_in_threadpool(process_payload, trained_model, request.text)
+    result = await run_in_threadpool(process_payload, trained_model, request.lines)
     return SentimentResponse(result)
 
 
@@ -257,5 +257,5 @@ async def home(request: Request, db: Session = Depends(get_db)):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 8070))
     uvicorn.run(app, host="0.0.0.0", port=port)
