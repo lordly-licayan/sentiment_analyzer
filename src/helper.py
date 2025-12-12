@@ -467,21 +467,22 @@ def process_payload(trained_model, lines: list):
     lines = list(set(lines))
 
     for line in lines:
-        comment_embedding = embedder.encode([line.strip()], convert_to_numpy=True)
-
-        probs = trained_model.predict_proba(comment_embedding)
-        logger.info(f"Predicted probabilities for line '{line}': {probs}")
+        comment_embedding = embedder.encode(
+            [line.strip()], convert_to_tensor=True, convert_to_numpy=True
+        )
 
         # Compute similarity scores (cosine similarity)
         scores = util.cos_sim(comment_embedding, category_embeddings)[0].cpu().tolist()
 
-        # # Get best category and score
-        # best_index = scores.index(max(scores))
-        # best_category = categories[best_index]
+        # Get best category and score
+        best_index = scores.index(max(scores))
+        best_category = TEACHER_EVALUATION_CATEGORIES[best_index]
 
         sentiment = trained_model.predict(comment_embedding)[0]
         data[line] = {
             "sentiment": str(sentiment),
+            "top_category": best_category,
+            "top_category_score": round(float(scores[best_index] * 100), 2),
             "category": sort_scores(
                 {
                     TEACHER_EVALUATION_CATEGORIES[i]: round(float(scores[i] * 100), 2)
@@ -490,7 +491,6 @@ def process_payload(trained_model, lines: list):
             ),
         }
 
-    # logger.info(data)
     return data
 
 
@@ -511,3 +511,14 @@ def list_of_uploaded_files(db):
     uploaded_files = list_fileinfo(db)
     result = [m.to_dict() for m in uploaded_files]
     return result
+
+
+# def classify_comment(model, category_embeddings, comment: str):
+#     comment_emb = model.encode(comment, convert_to_tensor=True)
+#     similarities = util.cos_sim(comment_emb, category_embeddings)[0]
+
+#     best_idx = similarities.argmax().item()
+#     best_cat = TEACHER_EVALUATION_CATEGORIES[best_idx]
+#     best_score = similarities[best_idx].item()
+
+#     return best_cat, best_score

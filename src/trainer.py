@@ -65,8 +65,6 @@ def perform_embedding(job_id, comments):
 
         for batch_idx in range(total_batches):
             try:
-                logger.info(f"Embedding batch {batch_idx + 1}/{total_batches}")
-
                 batch = comments[batch_idx * batch_size : (batch_idx + 1) * batch_size]
 
                 # Skip empty batch (happens if comments length is divisible by batch_size)
@@ -169,16 +167,6 @@ async def process_data_and_train(
                     message=f"Model name {model_name} already exists.",
                 )
                 return
-
-        logger.info(f"[{job_id}] CSV loaded | Rows: {len(df)}")
-
-        # if get_fileinfo(db, file_id):
-        #     update_job(
-        #         job_id,
-        #         status="Error",
-        #         message=f"File {filename} already used for training. You can delete the file for retraining.",
-        #     )
-        #     return
 
         result, errors = process_data(df)
         new_comments, new_labels = dict_to_lists(result)
