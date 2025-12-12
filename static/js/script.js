@@ -511,6 +511,10 @@ async function get_sentiments() {
         item.sentiment
       }</span>
           <br/>
+          <span style="font-size: 14px; color: #0a21eeff;">Top Category:</span> ${
+            item.top_category
+          } <span style="margin: 2px; font-size: 12px;">
+          <br/>
           <span style="font-size: 14px; color: #0f4404ff;">Categories:</span>
           <br/>
           <div style="margin-left: 15px; font-size: 12px;">

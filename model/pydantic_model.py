@@ -15,6 +15,8 @@ class CommentCategory(RootModel[Dict[str, float]]):
 
 class CommentResult(BaseModel):
     sentiment: str
+    top_category: str
+    top_category_score: float
     category: CommentCategory
 
 
