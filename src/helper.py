@@ -403,21 +403,19 @@ def save_trained_model(
 
 def retrieve_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
     """
-    Load the trained model from Google Cloud Storage.
+    Retrieve the trained model from local storage or cloud storage.
     """
-    if SAVE_TO_CLOUD_STORAGE:
-        if not file_exists(model_name):
-            raise FileNotFoundError(f"Model {model_name} not found in cloud storage.")
 
-        content = read_file_from_gcs(model_name)
-        file_obj = io.BytesIO(content)
-        clf = joblib.load(file_obj)
+    clf = None
+    if SAVE_TO_CLOUD_STORAGE:
+        if file_exists(model_name):
+            content = read_file_from_gcs(model_name)
+            file_obj = io.BytesIO(content)
+            clf = joblib.load(file_obj)
     else:
         model_path = os.path.join(model_dir, model_name)
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file {model_path} not found.")
-
-        clf = joblib.load(model_path)
+        if os.path.exists(model_path):
+            clf = joblib.load(model_path)
     return clf
 
 

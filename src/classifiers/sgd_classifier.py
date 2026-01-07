@@ -1,10 +1,7 @@
-import os
-import joblib
 import numpy as np
-from sklearn.discriminant_analysis import StandardScaler
 from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import train_test_split
-from src import JOBS, PATIENCE, TRAINED_MODEL_DIR
+from src import PATIENCE
 from src.helper import logger, update_job
 from sklearn.metrics import classification_report, accuracy_score
 
@@ -70,11 +67,7 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
     )
 
     # Scale embeddings
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_val_scaled = scaler.transform(X_val)
-
-    n_samples = X_train_scaled.shape[0]
+    n_samples = X_train.shape[0]
     epochs = calculate_epochs(n_samples)
     classes = np.unique(y_train)  # full set of labels
 
@@ -93,14 +86,14 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
 
         # Shuffle training data each epoch
         indices = np.random.permutation(n_samples)
-        X_epoch = X_train_scaled[indices]
+        X_epoch = X_train[indices]
         y_epoch = y_train[indices]
 
         # Train 1 epoch
         clf.partial_fit(X_epoch, y_epoch, classes=classes)
 
         # Evaluate on validation set
-        y_val_pred = clf.predict(X_val_scaled)
+        y_val_pred = clf.predict(X_val)
         acc = accuracy_score(y_val, y_val_pred)
         progress = int((epoch + 1) / epochs * 100)
         logger.info(

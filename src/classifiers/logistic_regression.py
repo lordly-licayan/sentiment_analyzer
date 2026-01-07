@@ -1,4 +1,3 @@
-from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
@@ -11,9 +10,7 @@ def create_logistic_regression(max_iter=1000, solver="lbfgs"):
     return clf
 
 
-def train_logistic_regression(
-    job_id, clf, X, y, test_size=0.2, random_state=42, max_iter=1000
-):
+def train_logistic_regression(job_id, clf, X, y, test_size=0.2, random_state=42):
     """
     Train Logistic Regression model and update job status.
     Args:
@@ -22,7 +19,6 @@ def train_logistic_regression(
         y (np.array or list): Training labels
         test_size (float): Fraction of data for validation
         random_state (int): Random seed for reproducibility
-        max_iter (int): Maximum iterations for Logistic Regression
     Returns:
         report: Classification report dictionary
     """
@@ -39,13 +35,7 @@ def train_logistic_regression(
         X, y, test_size=test_size, random_state=random_state, stratify=y
     )
 
-    # Scale embeddings
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_val_scaled = scaler.transform(X_val)
-
-    # Train
-    clf.fit(X_train_scaled, y_train)
+    clf.fit(X_train, y_train)
 
     update_job(
         job_id,
@@ -54,12 +44,12 @@ def train_logistic_regression(
     )
 
     # Evaluate on training set
-    y_train_pred = clf.predict(X_train_scaled)
+    y_train_pred = clf.predict(X_train)
     train_report = classification_report(y_train, y_train_pred, output_dict=True)
     train_acc = accuracy_score(y_train, y_train_pred)
 
     # Evaluate on validation set
-    y_val_pred = clf.predict(X_val_scaled)
+    y_val_pred = clf.predict(X_val)
     val_report = classification_report(y_val, y_val_pred, output_dict=True)
     val_acc = accuracy_score(y_val, y_val_pred)
     accuracy = round(val_acc * 100, 2)
