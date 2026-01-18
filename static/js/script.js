@@ -333,6 +333,11 @@ async function viewUploadedFiles() {
             Comments
             </button>
             <br/>
+            <button class="btn btn-download" onclick="downloadFile('${
+              m.file_id
+            }', this)">
+            Download
+            </button>            
             <button class="btn btn-delete" onclick="deleteFile('${
               m.file_id
             }', this)">
@@ -576,6 +581,10 @@ async function deleteModel(model_id, button) {
     button.innerHTML = originalContent;
     button.disabled = false;
   }
+}
+
+async function downloadFile(file_id, button) {
+
 }
 
 async function deleteFile(file_id, button) {
