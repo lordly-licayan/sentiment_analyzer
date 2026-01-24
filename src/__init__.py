@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+EMBEDDER_URL = os.getenv("EMBEDDER_URL")
+
 EMBEDDER_MODEL = os.getenv(
     "EMBEDDER_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )
