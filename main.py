@@ -14,6 +14,7 @@ from fastapi import (
     File,
     HTTPException,
     Request,
+    Response,
     UploadFile,
 )
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,9 +24,9 @@ from sqlalchemy.orm import Session
 import uvicorn
 from model.pydantic_model import SentimentRequest, SentimentResponse
 from src import (
+    ALLOWED_FRAME_ANCESTORS,
     DEFAULT_CLASSIFIER,
     DEFAULT_TRAINED_MODEL_NAME,
-    EMBEDDER_URL,
     SUPPORTED_CLASSIFIERS,
 )
 from src.db.crud.comments import (
@@ -70,26 +71,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from fastapi import FastAPI, Request
-from fastapi.responses import Response
-
-app = FastAPI()
 
 @app.middleware("http")
 async def iframe_middleware(request: Request, call_next):
     response: Response = await call_next(request)
 
+    allowed_urls = " ".join(u.strip() for u in ALLOWED_FRAME_ANCESTORS.split(","))
+
     # Allow embedding ONLY from your Flask app domain
-    response.headers["Content-Security-Policy"] = (
-        f"frame-ancestors {EMBEDDER_URL}"
-    )
+    response.headers["Content-Security-Policy"] = f"frame-ancestors {allowed_urls}"
 
     # Remove X-Frame-Options if present
     if "x-frame-options" in response.headers:
         del response.headers["x-frame-options"]
 
     return response
-
 
 
 # -----------------------------------------------------------
