@@ -5,10 +5,10 @@ body {
 }
 
 .container {
-  width: 95%;
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1400px;
   margin: auto;
-  padding: 20px;
+  padding: 10px;
 }
 
 h2 {

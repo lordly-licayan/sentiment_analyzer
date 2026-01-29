@@ -27,7 +27,7 @@
               <th>Semester</th>
               <th>Model Name</th>
               <th>Model </th>
-              <th>Accuracy</th>
+              <th style="width: 15%;">Metrics</th>
               <th>No. Of Data</th>
               <th>Date Trained</th>
               <th>Remarks</th>
@@ -41,7 +41,7 @@
               <td>{{ m.semester }}</td>
               <td>{{ m.model_name }}</td>
               <td>{{ m.classifier }}</td>
-              <td>{{ m.accuracy }}%</td>
+              <td>{{ m.metrics }}%</td>
               <td>{{ m.no_of_data }}</td>
               <td>{{ m.date_trained }}</td>
               <td>{{ m.remarks }}</td>
@@ -113,9 +113,21 @@
           <p>Status: <span id="status"></span></p>
           <p>Message: <span id="message"></span></p>
           <p>Accuracy: <span id="accuracy"></span></p>
-          <p>Precision: <span id="precision"></span></p>
-          <p>Recall: <span id="recall"></span></p>
-          <p>F1 Score: <span id="f1_score"></span></p>
+          <div>
+            <div><strong>Weighted Average:</strong></div>
+              <ul style="margin-top:0;">
+                <li>Precision: <span id="weighted_precision"></span></li>
+                <li>Recall: <span id="weighted_recall"></span></li>
+                <li>F1 Score: <span id="weighted_f1_score"></span></li>
+              </ul>
+
+            <div><strong>Macro Average:</strong></div>
+              <ul style="margin-top:0;">
+                <li>Precision: <span id="macro_precision"></span></li>
+                <li>Recall: <span id="macro_recall"></span></li>
+                <li>F1 Score: <span id="macro_f1_score"></span></li>
+              </ul>
+          </div>
           <p>Elapsed time: <span id="elapsedTime"></span></p>
           <p>Feedback: <span id="feedback"></span></p>
         </div>

@@ -1,4 +1,14 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Float, func
+from sqlalchemy import (
+    JSON,
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    Text,
+    Float,
+    func,
+)
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -51,7 +61,7 @@ class TrainedModel(Base):
     semester = Column(String(50), nullable=False)
     model_name = Column(String(255), nullable=False)
     classifier = Column(String(255), nullable=False)
-    accuracy = Column(Float, nullable=True)
+    metrics = Column(JSON, nullable=False, default=dict)
     no_of_data = Column(Integer, nullable=False)
     date_trained = Column(DateTime(timezone=True), server_default=func.now())
     remarks = Column(String(255), nullable=True)

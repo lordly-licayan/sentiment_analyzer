@@ -40,6 +40,34 @@ async function openTab(tabId, id = null) {
   }
 }
 
+function renderMetrics(metrics) {
+  const sections = [
+    { label: "Weighted Average", data: metrics.weighted_average },
+    { label: "Macro Average", data: metrics.macro_average }
+  ];
+
+  const accuracyHtml = `
+    <div><strong>Accuracy: </strong> <span>${metrics.accuracy.toFixed(2)}%</span></div>
+  `;
+
+  const sectionsHtml = sections.map(section => `
+    <div><strong>${section.label}</strong></div>
+    <ul style="margin-top:0;">
+      ${Object.entries(section.data)
+        .map(([key, value]) => `
+          <li>
+            ${key
+            .replace("_", " ")
+            .replace(/\b\w/g, c => c.toUpperCase())}: ${value.toFixed(2)}%
+          </li>
+        `)
+        .join("")}
+    </ul>
+  `).join("");
+
+  return accuracyHtml + sectionsHtml;
+}
+
 /* ----- DISPLAYING TRAINED MODELS ----- */
 async function viewTrainedModels() {
   const tbody = document.getElementById("models-tbody");
@@ -67,7 +95,7 @@ async function viewTrainedModels() {
                     <td>${m.semester}</td>
                     <td>${m.model_name}</td>
                     <td>${m.classifier}</td>
-                    <td>${m.accuracy}%</td>
+                    <td>${renderMetrics(m.metrics)}</td>
                     <td>${m.no_of_data}</td>
                     <td>${m.date_trained}</td>
                     <td>${m.remarks}</td>
@@ -165,9 +193,15 @@ function pollTraining(job_id) {
         document.getElementById("report-info").style.display = "block";
         document.getElementById("message").innerText = data.message;
         document.getElementById("accuracy").innerText = data.metrics.accuracy + "%";
-        document.getElementById("precision").innerText = data.metrics.precision + "%";
-        document.getElementById("recall").innerText = data.metrics.recall + "%";
-        document.getElementById("f1_score").innerText = data.metrics.f1_score + "%";
+
+        document.getElementById("weighted_precision").innerText = data.metrics.weighted_average.precision + "%";
+        document.getElementById("weighted_recall").innerText = data.metrics.weighted_average.recall + "%";
+        document.getElementById("weighted_f1_score").innerText = data.metrics.weighted_average.f1_score + "%";
+
+        document.getElementById("macro_precision").innerText = data.metrics.macro_average.precision + "%";
+        document.getElementById("macro_recall").innerText = data.metrics.macro_average.recall + "%";
+        document.getElementById("macro_f1_score").innerText = data.metrics.macro_average.f1_score + "%";
+
         document.getElementById("elapsedTime").innerText = data.elapsedTime;
         document.getElementById("feedback").innerText = data.feedback;
         startTraining(false);
@@ -261,10 +295,14 @@ async function train_model() {
   updateProgressUI(0, "Starting...");
 
   document.getElementById("accuracy").innerText = "";
-  document.getElementById("precision").innerText = "";
-  document.getElementById("recall").innerText = "";
-  document.getElementById("f1_score").innerText = "";
 
+  document.getElementById("weighted_precision").innerText = "";
+  document.getElementById("weighted_recall").innerText = "";
+  document.getElementById("weighted_f1_score").innerText = "";
+  
+  document.getElementById("macro_precision").innerText = "";
+  document.getElementById("macro_recall").innerText = "";
+  document.getElementById("macro_f1_score").innerText = "";
 
   try {
     const res = await fetch("/train_model", {

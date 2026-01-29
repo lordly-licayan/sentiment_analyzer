@@ -279,7 +279,7 @@ def create_job():
         "status": "queued",
         "progress": "",
         "message": "Job created",
-        "accuracy": "",
+        "metrics": "",
         "elapsedTime": "",
         "errors": "",
         "report": "",
@@ -393,7 +393,7 @@ def save_trained_model(
         semester=data.get("semester"),
         model_name=model_name,
         classifier=data.get("classifierModel"),
-        accuracy=metrics.get("accuracy"),
+        metrics=metrics,
         no_of_data=no_of_data,
         remarks=remarks,
     )

@@ -1,6 +1,7 @@
+import json
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Dict, Optional
 from fastapi import Form
 
 
@@ -53,7 +54,7 @@ class TrainedModelBase(BaseModel):
     semester: str
     model_name: str
     classifier: str
-    accuracy: float
+    metrics: Dict[str, Any]
     no_of_data: int
     date_trained: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     remarks: Optional[str] = None

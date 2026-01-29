@@ -53,9 +53,16 @@ def train_logistic_regression(
 
     metrics = {
         "accuracy": round(val_acc * 100, 2),
-        "precision": round(val_report["weighted avg"]["precision"] * 100, 2),
-        "recall": round(val_report["weighted avg"]["recall"] * 100, 2),
-        "f1_score": round(val_report["weighted avg"]["f1-score"] * 100, 2),
+        "weighted_average": {
+            "precision": round(val_report["weighted avg"]["precision"] * 100, 2),
+            "recall": round(val_report["weighted avg"]["recall"] * 100, 2),
+            "f1_score": round(val_report["weighted avg"]["f1-score"] * 100, 2),
+        },
+        "macro_average": {
+            "precision": round(val_report["macro avg"]["precision"] * 100, 2),
+            "recall": round(val_report["macro avg"]["recall"] * 100, 2),
+            "f1_score": round(val_report["macro avg"]["f1-score"] * 100, 2),
+        },
     }
 
     logger.info(f"Training complete. Report: {metrics}")

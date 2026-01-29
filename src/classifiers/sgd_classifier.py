@@ -123,9 +123,16 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=DEFAULT_TEST_SIZE):
 
     metrics = {
         "accuracy": round(acc * 100, 2),
-        "precision": round(report["weighted avg"]["precision"] * 100, 2),
-        "recall": round(report["weighted avg"]["recall"] * 100, 2),
-        "f1_score": round(report["weighted avg"]["f1-score"] * 100, 2),
+        "weighted_average": {
+            "precision": round(report["weighted avg"]["precision"] * 100, 2),
+            "recall": round(report["weighted avg"]["recall"] * 100, 2),
+            "f1_score": round(report["weighted avg"]["f1-score"] * 100, 2),
+        },
+        "macro_average": {
+            "precision": round(report["macro avg"]["precision"] * 100, 2),
+            "recall": round(report["macro avg"]["recall"] * 100, 2),
+            "f1_score": round(report["macro avg"]["f1-score"] * 100, 2),
+        },
     }
 
     logger.info(f"Training completed. Best Val Accuracy: {best_acc:.4f}")
