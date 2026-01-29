@@ -164,11 +164,11 @@ function pollTraining(job_id) {
 
         document.getElementById("report-info").style.display = "block";
         document.getElementById("message").innerText = data.message;
-        document.getElementById("accuracy").innerText = data.accuracy;
+        document.getElementById("accuracy").innerText = data.metrics.accuracy + "%";
+        document.getElementById("precision").innerText = data.metrics.precision + "%";
+        document.getElementById("recall").innerText = data.metrics.recall + "%";
+        document.getElementById("f1_score").innerText = data.metrics.f1_score + "%";
         document.getElementById("elapsedTime").innerText = data.elapsedTime;
-        document.getElementById("report").innerText = JSON.stringify(
-          data.report
-        );
         document.getElementById("feedback").innerText = data.feedback;
         startTraining(false);
       }
@@ -261,7 +261,10 @@ async function train_model() {
   updateProgressUI(0, "Starting...");
 
   document.getElementById("accuracy").innerText = "";
-  document.getElementById("report").innerText = "";
+  document.getElementById("precision").innerText = "";
+  document.getElementById("recall").innerText = "";
+  document.getElementById("f1_score").innerText = "";
+
 
   try {
     const res = await fetch("/train_model", {

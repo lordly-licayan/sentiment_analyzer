@@ -114,13 +114,13 @@ def perform_training(job_id, model_name, classifier_model, X_train, y_train):
     """
     if classifier_model == DEFAULT_CLASSIFIER:
         clf = create_logistic_regression()
-        report, accuracy = train_logistic_regression(job_id, clf, X_train, y_train)
+        metrics = train_logistic_regression(job_id, clf, X_train, y_train)
     else:
         clf = retrieve_trained_model(model_name)
         if not clf:
             clf = create_SGD_classifier()
-        report, accuracy = train_sgd_classifier(job_id, clf, X_train, y_train)
-    return clf, report, accuracy
+        metrics = train_sgd_classifier(job_id, clf, X_train, y_train)
+    return clf, metrics
 
 
 # -----------------------------------------------------------
@@ -219,7 +219,7 @@ async def process_data_and_train(
         # Train model
         # ---------------------------------------
         logger.info(f"[{job_id}] Training model.")
-        clf, report, accuracy = perform_training(
+        clf, metrics = perform_training(
             job_id, model_name, classifier_model, X_train, y_train
         )
 
@@ -236,10 +236,10 @@ async def process_data_and_train(
             save_file_info(db, file_id, filename, no_of_new_comments, errors)
             save_comments(db, file_id, new_comments, new_labels, new_sentiments)
 
-        remarks = f"Model is trained by {classifier_model} with {accuracy}% accuracy."
+        remarks = f"Model is trained by {classifier_model} with {metrics['accuracy']}% accuracy."
 
         save_trained_model(
-            db, clf, data, round(accuracy, 2), no_of_trained_data, remarks, model_name
+            db, clf, data, metrics, no_of_trained_data, remarks, model_name
         )
 
         elapsedTime = format_seconds(time.time() - start_time)

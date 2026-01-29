@@ -364,7 +364,7 @@ def save_trained_model(
     db,
     clf,
     data: dict,
-    accuracy,
+    metrics,
     no_of_data,
     remarks,
     model_name=DEFAULT_TRAINED_MODEL_NAME,
@@ -380,7 +380,7 @@ def save_trained_model(
 
         upload(model_name, model_bytes, "application/octet-stream")
     else:
-        if os.path.exists(model_dir):
+        if not os.path.exists(model_dir):
             os.makedirs(model_dir, exist_ok=True)
 
         model_path = os.path.join(model_dir, model_name)
@@ -393,7 +393,7 @@ def save_trained_model(
         semester=data.get("semester"),
         model_name=model_name,
         classifier=data.get("classifierModel"),
-        accuracy=accuracy,
+        accuracy=metrics.get("accuracy"),
         no_of_data=no_of_data,
         remarks=remarks,
     )

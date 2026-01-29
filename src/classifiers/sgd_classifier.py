@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import train_test_split
-from src import PATIENCE
+from src import DEFAULT_TEST_SIZE, PATIENCE
 from src.helper import logger, update_job
 from sklearn.metrics import classification_report, accuracy_score
 
@@ -39,7 +39,7 @@ def calculate_epochs(n_samples: int) -> int:
         return 10  # For very large datasets, use fewer epochs with partial_fit
 
 
-def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
+def train_sgd_classifier(job_id, clf, X, y, test_size=DEFAULT_TEST_SIZE):
     """
     Train SGDClassifier with training/validation split and early stopping.
 
@@ -120,14 +120,20 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=0.2):
 
     # Final evaluation on validation set
     report = classification_report(y_val, y_val_pred, output_dict=True)
-    accuracy = round(acc * 100, 2)
+
+    metrics = {
+        "accuracy": round(acc * 100, 2),
+        "precision": round(report["weighted avg"]["precision"] * 100, 2),
+        "recall": round(report["weighted avg"]["recall"] * 100, 2),
+        "f1_score": round(report["weighted avg"]["f1-score"] * 100, 2),
+    }
+
     logger.info(f"Training completed. Best Val Accuracy: {best_acc:.4f}")
 
     update_job(
         job_id,
-        accuracy=f"{accuracy:.2f}%",
         message="Done training SGD Classifier model.",
-        report=report,
+        metrics=metrics,
     )
 
-    return report, accuracy
+    return metrics

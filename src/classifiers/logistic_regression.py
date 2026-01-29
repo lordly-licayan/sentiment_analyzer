@@ -2,6 +2,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
 
+from src import DEFAULT_TEST_SIZE
 from src.helper import logger, update_job
 
 
@@ -10,7 +11,9 @@ def create_logistic_regression(max_iter=1000, solver="lbfgs"):
     return clf
 
 
-def train_logistic_regression(job_id, clf, X, y, test_size=0.2, random_state=42):
+def train_logistic_regression(
+    job_id, clf, X, y, test_size=DEFAULT_TEST_SIZE, random_state=42
+):
     """
     Train Logistic Regression model and update job status.
     Args:
@@ -43,30 +46,23 @@ def train_logistic_regression(job_id, clf, X, y, test_size=0.2, random_state=42)
         message="Evaluating accuracy of the model...",
     )
 
-    # Evaluate on training set
-    y_train_pred = clf.predict(X_train)
-    train_report = classification_report(y_train, y_train_pred, output_dict=True)
-    train_acc = accuracy_score(y_train, y_train_pred)
-
     # Evaluate on validation set
     y_val_pred = clf.predict(X_val)
     val_report = classification_report(y_val, y_val_pred, output_dict=True)
     val_acc = accuracy_score(y_val, y_val_pred)
-    accuracy = round(val_acc * 100, 2)
 
-    report = {
-        "trained_report": train_report,
-        "trained_accuracy": train_acc,
-        "validation_report": val_report,
-        "validation_accuracy": val_acc,
+    metrics = {
+        "accuracy": round(val_acc * 100, 2),
+        "precision": round(val_report["weighted avg"]["precision"] * 100, 2),
+        "recall": round(val_report["weighted avg"]["recall"] * 100, 2),
+        "f1_score": round(val_report["weighted avg"]["f1-score"] * 100, 2),
     }
 
-    logger.info(f"Training complete. Report: {report}")
+    logger.info(f"Training complete. Report: {metrics}")
 
     update_job(
         job_id,
-        accuracy=f"{accuracy:.2f}%",
         message="Done training logistic regression model.",
-        report=report,
+        metrics=metrics,
     )
-    return report, accuracy
+    return metrics

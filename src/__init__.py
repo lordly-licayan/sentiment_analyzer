@@ -22,6 +22,8 @@ SUPPORTED_CLASSIFIERS = json.loads(
     )
 )
 DEFAULT_CLASSIFIER = os.getenv("DEFAULT_CLASSIFIER", "LogisticRegression")
+DEFAULT_TEST_SIZE = float(os.getenv("DEFAULT_TEST_SIZE", 0.2))
+
 
 LOGISTIC_REGRESSION_MODEL = os.getenv("LOGISTIC_REGRESSION_MODEL", "LogisticRegression")
 SGD_CLASSIFIER_MODEL = os.getenv("SGD_CLASSIFIER_MODEL", "SGDClassifier")
