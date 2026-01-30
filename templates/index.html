@@ -10,6 +10,7 @@
       <!-- TAB HEADERS -->
       <div class="tabs">
         <div class="tab active" onclick="openTab('models')">Models</div>
+        <div class="tab" onclick="openTab('trained_model_results')">Training Result</div>
         <div class="tab" onclick="openTab('train_model')">Train Model</div>
         <div class="tab" onclick="openTab('uploaded_files')">Uploaded Files</div>
         <div class="tab" onclick="openTab('comments')">View Comments</div>
@@ -45,6 +46,41 @@
               <td>{{ m.data_count }}</td>
               <td>{{ m.date_trained }}</td>
               <td>{{ m.remarks }}</td>
+            </tr>
+            {% endfor %} -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- TRAINED MODEL RESULTS TAB -->
+      <div id="trained_model_results" class="tab-content">
+        <h2 id="trained_model_results_desc">Trained Model Evaluation Result</h2>
+        <!-- Search box -->
+        <div>
+        <input 
+          type="text" 
+          id="trained-model-results_comment-search" 
+          placeholder="Search comment..." 
+          style="margin-bottom: 10px; padding: 6px; width: 450px;"
+        />
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Comment</th>
+              <th>Actual Sentiment</th>
+              <th>Predicted Sentiment</th>
+              <th>Confidence Score</th>
+              <th>Is Matched</th>
+            </tr>
+          </thead>
+          <tbody id="trained-model-results_comments-tbody">
+            <!-- {% for c in comments %}
+            <tr>
+              <td>{{ c.comment }}</td>
+              <td>{{ c.label }}</td>
+              <td>{{ c.remarks }}</td>
             </tr>
             {% endfor %} -->
           </tbody>

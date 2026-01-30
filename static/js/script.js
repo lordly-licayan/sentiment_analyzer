@@ -3,7 +3,7 @@ let loading = false;
 let finished = false;
 
 /* ----- TAB NAVIGATION ----- */
-async function openTab(tabId, id = null) {
+async function openTab(tabId, data={}) {
   document
     .querySelectorAll(".tab")
     .forEach((tab) => tab.classList.remove("active"));
@@ -27,12 +27,16 @@ async function openTab(tabId, id = null) {
     await viewTrainedModels();
   }
 
+  if (tabId === "trained_model_results") {
+    await viewTrainedModelResults(data);
+  }
+
   if (tabId === "uploaded_files") {
     await viewUploadedFiles();
   }
 
   if (tabId === "comments") {
-    await viewCommentsPaging(id);
+    await viewCommentsPaging(data);
   }
 
   if (tabId === "playground") {
@@ -101,6 +105,11 @@ async function viewTrainedModels() {
                     <td>${m.remarks}</td>
                     <td>
                       <div>
+                        <button id='${
+                          m.id
+                        }' class="btn btn-view" onclick="openTrainedModelResultsTab('${m.id}', '${m.model_name}')">
+                        View Evaluation
+                        </button>
                         <button class="btn btn-delete" onclick="deleteModel('${
                           m.id
                         }', this)">
@@ -115,6 +124,87 @@ async function viewTrainedModels() {
     console.error(err);
     tbody.innerHTML = `<tr><td colspan="8">Error loading models.</td></tr>`;
   }
+}
+
+
+/* ----- VIEW TRAINED MODEL RESULTS ----- */
+async function openTrainedModelResultsTab(model_id, model_name) {
+  data = {"model_id": model_id, "model_name": model_name}
+  openTab("trained_model_results", data);
+}
+
+async function viewTrainedModelResults(data) {
+  const tbody = document.getElementById("trained-model-results_comments-tbody");
+
+  cursor = null;
+  finished = false;
+  let counter = 1;
+  tbody.innerHTML = ""; // clear previous comments
+  const model_id = data?.model_id ?? null;
+  const model_name = data?. model_name ?? "Select a trained model";
+
+  document.getElementById("trained_model_results_desc").innerText = "Trained Model Evaluation Result (" + model_name + ")"  ;
+
+  // Function to load comments
+  async function loadComments(model_id) {
+    if (loading || finished) return;
+
+    loading = true;
+
+    let url = `/trained-model-results-paging?limit=20`;
+    if (model_id) {
+      url += `&model_id=${model_id}`;
+    }
+
+    if (cursor) {
+      url += `&cursor=${cursor}`;
+    }
+
+    try {
+      const response = await fetch(url);
+      const result = await response.json();
+
+      if (result.data.length === 0) {
+        finished = true; // no more comments
+        return;
+      }
+
+      result.data.forEach((m) => {
+        const rowStyle = m.is_matched ? "": "background-color:#ffe5e5; color:#7f1d1d;";
+
+        tbody.innerHTML += `
+          <tr style="${rowStyle}">
+            <td>${counter++}</td>
+            <td>${m.comment}</td>
+            <td>${m.actual_label}</td>
+            <td>${m.predicted_label}</td>
+            <td>${m.confidence}%</td>
+            <td>${m.is_matched}</td>
+          </tr>
+        `;
+      });
+
+      // Update cursor to the last comment's ID
+      cursor = result.data[result.data.length - 1].id;
+    } catch (err) {
+      console.error("Failed to load comments:", err);
+    } finally {
+      loading = false;
+    }
+  }
+
+  // Scroll listener for infinite scrolling
+  window.addEventListener("scroll", () => {
+    if (
+      window.innerHeight + window.scrollY >=
+      document.body.offsetHeight - 100
+    ) {
+      loadComments(model_id);
+    }
+  });
+
+  // Initial load
+  loadComments(model_id);
 }
 
 /* ----- CSV UPLOAD HANDLING ----- */
@@ -370,7 +460,7 @@ async function viewUploadedFiles() {
           <div>
             <button id='${
               m.file_id
-            }' class="btn btn-view" onclick="openCommentsTab('${m.file_id}')">
+            }' class="btn btn-view" onclick="openCommentsTab('${m.file_id}', '${m.filename}')">
             Comments
             </button>
             <br/>
@@ -392,17 +482,19 @@ async function viewUploadedFiles() {
 }
 
 /* ----- VIEW COMMENTS ----- */
-async function openCommentsTab(file_id) {
-  openTab("comments", file_id);
+async function openCommentsTab(file_id, filename) {
+  const data= {"id": file_id, "filename": filename}
+  openTab("comments", data);
 }
 
-async function viewCommentsPaging(file_id = null) {
+async function viewCommentsPaging(data) {
   const tbody = document.getElementById("comments-tbody");
 
   cursor = null;
   finished = false;
   let counter = 1;
   tbody.innerHTML = ""; // clear previous comments
+  const file_id = data?.file_id ?? null;
 
   // Function to load comments
   async function loadComments(file_id) {
@@ -576,6 +668,19 @@ async function get_sentiments() {
     spinner.style.display = "none";
   }
 }
+
+/* ----- TRAINED MODEL RESULTS COMMENT SEARCH ----- */
+document
+  .getElementById("trained-model-results_comment-search")
+  .addEventListener("input", function () {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll("#trained-model-results_comments-tbody tr");
+
+    rows.forEach((row) => {
+      const comment = row.children[1].textContent.toLowerCase();
+      row.style.display = comment.includes(filter) ? "" : "none";
+    });
+  });
 
 /* ----- COMMENT SEARCH ----- */
 document

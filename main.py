@@ -37,6 +37,7 @@ from src.db.crud.trainedmodel import (
     delete_trained_model,
     get_trained_model,
 )
+from src.db.crud.trainedmodelresult import paginate_trained_model_results
 from src.db.database import get_db
 from src.db.schemas import TrainModelForm, TrainModelFormDependency
 from src.helper import (
@@ -221,6 +222,24 @@ async def delete_file(file_id: str, db: Session = Depends(get_db)):
         )
 
     return {"detail": f"File with ID {file_id} and its comments have been deleted."}
+
+
+@app.get("/trained-model-results-paging")
+async def get_trained_model_results_paging(
+    model_id: Optional[int] = None,
+    cursor: int | None = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+
+    if not model_id:
+        return {"data": []}
+
+    data = await run_in_threadpool(
+        paginate_trained_model_results, db, model_id, limit, cursor
+    )
+    result = {"data": data}
+    return result
 
 
 @app.get("/comments-paging")

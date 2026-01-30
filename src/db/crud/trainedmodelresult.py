@@ -27,10 +27,12 @@ def save_trained_model_results(db: Session, trained_model_id: int, data: list):
     db.commit()
 
 
-def paginate_results(db: Session, id: int = None, limit: int = 100, cursor: int = None):
-    if id:
+def paginate_trained_model_results(
+    db: Session, model_id: int = None, limit: int = 100, cursor: int = None
+):
+    if model_id:
         query = db.query(models.TrainedModelResult).filter(
-            models.TrainedModelResult.id == id
+            models.TrainedModelResult.trained_model_id == model_id
         )
     else:
         query = db.query(models.TrainedModelResult)
