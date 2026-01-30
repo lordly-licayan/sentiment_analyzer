@@ -1,4 +1,3 @@
-import json
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -65,6 +64,30 @@ class TrainedModelCreate(TrainedModelBase):
 
 
 class TrainedModel(TrainedModelBase):
+    id: int
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------
+# TrainedModelResult Schemas
+# ---------------------
+class TrainedModelResultBase(BaseModel):
+    trained_model_id: int
+    comment: str
+    actual_label: str
+    predicted_label: str
+    confidence: Optional[float] = Field(
+        None, ge=0, le=100, description="Confidence score (0–100)"
+    )
+    is_matched: Optional[bool] = None
+
+
+class TrainedModelResultCreate(TrainedModelResultBase):
+    pass
+
+
+class TrainedModelResult(TrainedModelResultBase):
     id: int
 
     model_config = {"from_attributes": True}

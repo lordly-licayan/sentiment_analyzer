@@ -52,18 +52,26 @@ CREATE TABLE IF NOT EXISTS trained_model (
 );
 
 -- =========================================
--- Table: TrainedModelResultTbl
+-- Table: trained_model_result
 -- =========================================
 -- Drop the table if it already exists
-DROP TABLE IF EXISTS TrainedModelResultTbl CASCADE;
+DROP TABLE IF EXISTS trained_model_result CASCADE;
 
-CREATE TABLE IF NOT EXISTS TrainedModelResultTbl (
+CREATE TABLE IF NOT EXISTS trained_model_result (
     id SERIAL PRIMARY KEY,
-    model_id VARCHAR(255) NOT NULL,
+    trained_model_id INTEGER NOT NULL,
     comment TEXT NOT NULL,
-    actual_label VARCHAR(255) NOT NULL,
-    predicted_label VARCHAR(255) NOT NULL,
+    actual_label VARCHAR(50) NOT NULL,
+    predicted_label VARCHAR(50) NOT NULL,
     confidence REAL,
-    is_matched BOOLEAN DEFAULT FALSE
+    is_matched BOOLEAN DEFAULT FALSE,
+
+    CONSTRAINT fk_trained_model_result_trained_model
+        FOREIGN KEY (trained_model_id)
+        REFERENCES trained_model(id)
+        ON DELETE CASCADE
 );
+
+
+
 

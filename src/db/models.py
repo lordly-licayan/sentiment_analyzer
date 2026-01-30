@@ -1,6 +1,8 @@
 from sqlalchemy import (
     JSON,
+    Boolean,
     Column,
+    Float,
     Integer,
     String,
     DateTime,
@@ -79,8 +81,49 @@ class TrainedModel(Base):
     date_trained = Column(DateTime(timezone=True), server_default=func.now())
     remarks = Column(Text)
 
+    results = relationship(
+        "TrainedModelResult",
+        back_populates="trained_model",
+        cascade="all, delete-orphan",
+    )
+
     def to_dict(self):
         d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
         if d.get("date_trained"):
             d["date_trained"] = d["date_trained"].strftime("%Y-%m-%d %H:%M:%S")
         return d
+
+
+class TrainedModelResult(Base):
+    __tablename__ = "trained_model_result"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    trained_model_id = Column(
+        Integer,
+        ForeignKey("trained_model.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    comment = Column(Text, nullable=False)
+    actual_label = Column(String(50), nullable=False)
+    predicted_label = Column(String(50), nullable=False)
+    confidence = Column(Float)
+    is_matched = Column(Boolean, default=False)
+
+    # Relationship → many results belong to one trained model
+    trained_model = relationship("TrainedModel", back_populates="results")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "trained_model_id": self.trained_model_id,
+            "comment": self.comment,
+            "actual_label": self.actual_label,
+            "predicted_label": self.predicted_label,
+            "confidence": (
+                round(self.confidence, 2) if self.confidence is not None else None
+            ),
+            "is_matched": self.is_matched,
+        }

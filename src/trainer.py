@@ -18,6 +18,10 @@ from src import (
 from src.db.crud.comments import list_all_comments
 from src.db.crud.fileinfo import get_fileinfo
 from src.db.crud.trainedmodel import get_trained_model_name
+from src.db.crud.trainedmodelresult import (
+    create_trained_model_results,
+    save_trained_model_results,
+)
 from src.db.database import get_db
 from src.helper import (
     dict_to_lists,
@@ -245,6 +249,8 @@ async def process_data_and_train(
         model_id = save_trained_model(
             db, clf, data, metrics, no_of_trained_data, remarks, model_name
         )
+
+        save_trained_model_results(db, model_id, evaluation_results)
 
         elapsedTime = format_seconds(time.time() - start_time)
         logger.info(f"[{job_id}] Training completed in {elapsedTime}.")
