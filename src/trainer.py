@@ -108,19 +108,23 @@ def perform_embedding(job_id, comments):
         raise
 
 
-def perform_training(job_id, model_name, classifier_model, X_train, y_train):
+def perform_training(job_id, model_name, classifier_model, X_train, y_train, comments):
     """
     Perform training using the specified classifier.
     """
     if classifier_model == DEFAULT_CLASSIFIER:
         clf = create_logistic_regression()
-        metrics = train_logistic_regression(job_id, clf, X_train, y_train)
+        metrics, evaluation_results = train_logistic_regression(
+            job_id, clf, X_train, y_train, comments
+        )
     else:
         clf = retrieve_trained_model(model_name)
         if not clf:
             clf = create_SGD_classifier()
-        metrics = train_sgd_classifier(job_id, clf, X_train, y_train)
-    return clf, metrics
+        metrics, evaluation_results = train_sgd_classifier(
+            job_id, clf, X_train, y_train, comments
+        )
+    return clf, metrics, evaluation_results
 
 
 # -----------------------------------------------------------
@@ -219,8 +223,8 @@ async def process_data_and_train(
         # Train model
         # ---------------------------------------
         logger.info(f"[{job_id}] Training model.")
-        clf, metrics = perform_training(
-            job_id, model_name, classifier_model, X_train, y_train
+        clf, metrics, evaluation_results = perform_training(
+            job_id, model_name, classifier_model, X_train, y_train, all_comments
         )
 
         # ---------------------------------------
@@ -238,7 +242,7 @@ async def process_data_and_train(
 
         remarks = f"Model is trained by {classifier_model} with {metrics['accuracy']}% accuracy."
 
-        save_trained_model(
+        model_id = save_trained_model(
             db, clf, data, metrics, no_of_trained_data, remarks, model_name
         )
 

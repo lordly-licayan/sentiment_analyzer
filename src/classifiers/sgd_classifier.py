@@ -39,7 +39,7 @@ def calculate_epochs(n_samples: int) -> int:
         return 10  # For very large datasets, use fewer epochs with partial_fit
 
 
-def train_sgd_classifier(job_id, clf, X, y, test_size=DEFAULT_TEST_SIZE):
+def train_sgd_classifier(job_id, clf, X, y, comments, test_size=DEFAULT_TEST_SIZE):
     """
     Train SGDClassifier with training/validation split and early stopping.
 
@@ -62,8 +62,8 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=DEFAULT_TEST_SIZE):
     )
 
     # Split into training and validation
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=test_size, random_state=42, stratify=y
+    X_train, X_val, y_train, y_val, texts_train, texts_val = train_test_split(
+        X, y, comments, test_size=test_size, random_state=42, stratify=y
     )
 
     # Scale embeddings
@@ -94,6 +94,8 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=DEFAULT_TEST_SIZE):
 
         # Evaluate on validation set
         y_val_pred = clf.predict(X_val)
+        y_val_proba = clf.predict_proba(X_val)  # shape: (n_samples, n_classes)
+
         acc = accuracy_score(y_val, y_val_pred)
         progress = int((epoch + 1) / epochs * 100)
         logger.info(
@@ -121,6 +123,22 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=DEFAULT_TEST_SIZE):
     # Final evaluation on validation set
     report = classification_report(y_val, y_val_pred, output_dict=True)
 
+    evaluation_results = []
+    for i, (comment, true_label, pred_label) in enumerate(
+        zip(texts_val, y_val, y_val_pred)
+    ):
+        class_probs = y_val_proba[i]  # probabilities for this sample
+
+        evaluation_results.append(
+            {
+                "comment": comment,
+                "actual_label": str(true_label),
+                "predicted_label": str(pred_label),
+                "is_matched": str(true_label) == str(pred_label),
+                "confidence": float(round(max(class_probs) * 100, 2)),
+            }
+        )
+
     metrics = {
         "accuracy": round(acc * 100, 2),
         "weighted_average": {
@@ -143,4 +161,4 @@ def train_sgd_classifier(job_id, clf, X, y, test_size=DEFAULT_TEST_SIZE):
         metrics=metrics,
     )
 
-    return metrics
+    return metrics, evaluation_results

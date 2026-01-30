@@ -6,71 +6,81 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Text,
-    Float,
     func,
 )
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from .database import Base
+
+
+from sqlalchemy import (
+    JSON,
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    Text,
+    func,
+)
+from sqlalchemy.orm import relationship
 from .database import Base
 
 
 class FileInfo(Base):
-    __tablename__ = "fileinfotbl"
+    __tablename__ = "file_info"
 
     id = Column(Integer, primary_key=True, index=True)
-    file_id = Column(String(255), unique=True, index=True)
+    file_id = Column(String(255), unique=True, index=True, nullable=False)
     filename = Column(String(255), nullable=False)
-    no_of_data = Column(Integer, nullable=False, default=0)
+    data_count = Column(Integer, nullable=False, default=0)
     date_uploaded = Column(DateTime(timezone=True), server_default=func.now())
-    remarks = Column(Text, nullable=True)
+    remarks = Column(Text)
 
-    # Relationship → one file has many comments
-    comments = relationship("Comments", back_populates="file", cascade="all, delete")
+    # one file → many comments
+    comments = relationship(
+        "Comment", back_populates="file_info", cascade="all, delete-orphan"
+    )
 
     def to_dict(self):
         d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-
-        # Format datetime → readable string
         if d.get("date_uploaded"):
             d["date_uploaded"] = d["date_uploaded"].strftime("%Y-%m-%d %H:%M:%S")
-
         return d
 
 
-class Comments(Base):
-    __tablename__ = "commentstbl"
+class Comment(Base):
+    __tablename__ = "comment"
 
     id = Column(Integer, primary_key=True, index=True)
-    file_id = Column(String(255), ForeignKey("fileinfotbl.file_id"), nullable=False)
+    file_id = Column(
+        Integer, ForeignKey("file_info.id", ondelete="CASCADE"), nullable=False
+    )
     comment = Column(Text, nullable=False)
     label = Column(Integer, nullable=False)
-    remarks = Column(Text, nullable=False)
+    remarks = Column(Text)
 
-    # Relationship → comment belongs to file
-    file = relationship("FileInfo", back_populates="comments")
+    # many comments → one file
+    file_info = relationship("FileInfo", back_populates="comments")
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class TrainedModel(Base):
-    __tablename__ = "trainedmodeltbl"
+    __tablename__ = "trained_model"
 
     id = Column(Integer, primary_key=True, index=True)
-    sy = Column(String(50), nullable=False)
+    school_year = Column(String(50), nullable=False)
     semester = Column(String(50), nullable=False)
     model_name = Column(String(255), nullable=False)
-    classifier = Column(String(255), nullable=False)
+    classifier_name = Column(String(255), nullable=False)
     metrics = Column(JSON, nullable=False, default=dict)
-    no_of_data = Column(Integer, nullable=False)
+    data_count = Column(Integer, nullable=False, default=0)
     date_trained = Column(DateTime(timezone=True), server_default=func.now())
-    remarks = Column(String(255), nullable=True)
+    remarks = Column(Text)
 
     def to_dict(self):
         d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-
-        # Format datetime → readable string
         if d.get("date_trained"):
             d["date_trained"] = d["date_trained"].strftime("%Y-%m-%d %H:%M:%S")
-
         return d

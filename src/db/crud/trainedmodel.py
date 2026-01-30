@@ -7,7 +7,7 @@ def create_trained_model(db: Session, model: schemas.TrainedModelCreate):
     db.add(db_model)
     db.commit()
     db.refresh(db_model)
-    return db_model
+    return db_model.id
 
 
 def list_trained_models(db: Session):

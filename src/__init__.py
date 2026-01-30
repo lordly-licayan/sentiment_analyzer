@@ -13,7 +13,7 @@ EMBEDDER_MODEL = os.getenv(
 HUGGINGFACE_HUB_TOKEN = os.getenv("HUGGINGFACE_HUB_TOKEN", "")
 
 LABEL_MAP = json.loads(
-    os.getenv("LABEL_MAP", {"negative": -1, "neutral": 0, "positive": 1})
+    os.getenv("LABEL_MAP", {"Negative": -1, "Neutral": 0, "Positive": 1})
 )
 
 SUPPORTED_CLASSIFIERS = json.loads(

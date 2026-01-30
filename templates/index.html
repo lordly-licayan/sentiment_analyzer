@@ -23,7 +23,7 @@
           <thead>
             <tr>
               <th>No.</th>
-              <th>SY</th>
+              <th>School Year</th>
               <th>Semester</th>
               <th>Model Name</th>
               <th>Model </th>
@@ -37,12 +37,12 @@
           <tbody id="models-tbody">
             <!-- {% for m in models %}
             <tr>
-              <td>{{ m.sy }}</td>
+              <td>{{ m.school_year }}</td>
               <td>{{ m.semester }}</td>
               <td>{{ m.model_name }}</td>
-              <td>{{ m.classifier }}</td>
+              <td>{{ m.classifier_name }}</td>
               <td>{{ m.metrics }}%</td>
-              <td>{{ m.no_of_data }}</td>
+              <td>{{ m.data_count }}</td>
               <td>{{ m.date_trained }}</td>
               <td>{{ m.remarks }}</td>
             </tr>
@@ -77,8 +77,8 @@
         <div style="display: flex; gap: 10px; align-items: center">
           <select id="schoolYearSelect">
             <option value="">Select School Year</option>
-            {% for sy in school_years %}
-            <option value="{{ sy }}">{{ sy }}</option>
+            {% for school_year in school_years %}
+            <option value="{{ school_year }}">{{ school_year }}</option>
             {% endfor %}
           </select>
 
@@ -152,7 +152,7 @@
             <!-- {% for f in uploaded_files %}
             <tr>
               <td>{{ f.filename }}</td>
-              <td>{{ f.no_of_data }}</td>
+              <td>{{ f.data_count }}</td>
               <td>{{ f.date_uploaded }}</td>
               <td>{{ f.remarks or "" }}</td>
               <td>

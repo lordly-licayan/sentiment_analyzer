@@ -337,11 +337,11 @@ def get_file_hash(content):
     return file_hash
 
 
-def save_file_info(db, file_id, filename, no_of_data, errors):
+def save_file_info(db, file_id, filename, data_count, errors):
     file_info = FileInfoBase(
         file_id=file_id,
         filename=filename,
-        no_of_data=no_of_data,
+        data_count=data_count,
         remarks=str(errors),
     )
     create_fileinfo(db, file_info)
@@ -365,7 +365,7 @@ def save_trained_model(
     clf,
     data: dict,
     metrics,
-    no_of_data,
+    data_count,
     remarks,
     model_name=DEFAULT_TRAINED_MODEL_NAME,
     model_dir=TRAINED_MODEL_DIR,
@@ -389,16 +389,17 @@ def save_trained_model(
         logger.info(f"Model saved to {model_path}")
 
     trained_model = TrainedModelBase(
-        sy=data.get("sy"),
+        school_year=data.get("school_year"),
         semester=data.get("semester"),
         model_name=model_name,
-        classifier=data.get("classifierModel"),
+        classifier_name=data.get("classifierModel"),
         metrics=metrics,
-        no_of_data=no_of_data,
+        data_count=data_count,
         remarks=remarks,
     )
 
-    create_trained_model(db, trained_model)
+    model_id = create_trained_model(db, trained_model)
+    return model_id
 
 
 def retrieve_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):

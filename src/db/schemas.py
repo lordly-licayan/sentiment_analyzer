@@ -11,7 +11,7 @@ from fastapi import Form
 class FileInfoBase(BaseModel):
     file_id: str
     filename: str
-    no_of_data: int
+    data_count: int
     date_uploaded: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     remarks: Optional[str] = None
 
@@ -50,12 +50,12 @@ class Comment(CommentBase):
 # TrainedModel Schemas
 # ---------------------
 class TrainedModelBase(BaseModel):
-    sy: str
+    school_year: str
     semester: str
     model_name: str
-    classifier: str
+    classifier_name: str
     metrics: Dict[str, Any]
-    no_of_data: int
+    data_count: int
     date_trained: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     remarks: Optional[str] = None
 
@@ -72,17 +72,20 @@ class TrainedModel(TrainedModelBase):
 
 class TrainModelForm(BaseModel):
     modelName: str
-    sy: str
+    school_year: str
     semester: str
     classifierModel: str
 
 
 def TrainModelFormDependency(
     modelName: str = Form(...),
-    sy: str = Form(...),
+    school_year: str = Form(...),
     semester: str = Form(...),
     classifierModel: str = Form(...),
 ):
     return TrainModelForm(
-        modelName=modelName, sy=sy, semester=semester, classifierModel=classifierModel
+        modelName=modelName,
+        school_year=school_year,
+        semester=semester,
+        classifierModel=classifierModel,
     )

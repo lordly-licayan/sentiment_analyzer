@@ -91,12 +91,12 @@ async function viewTrainedModels() {
       tbody.innerHTML += `
                 <tr>
                     <td>${counter++}</td>
-                    <td>${m.sy}</td>
+                    <td>${m.school_year}</td>
                     <td>${m.semester}</td>
                     <td>${m.model_name}</td>
-                    <td>${m.classifier}</td>
+                    <td>${m.classifier_name}</td>
                     <td>${renderMetrics(m.metrics)}</td>
-                    <td>${m.no_of_data}</td>
+                    <td>${m.data_count}</td>
                     <td>${m.date_trained}</td>
                     <td>${m.remarks}</td>
                     <td>
@@ -283,7 +283,7 @@ async function train_model() {
   const formData = new FormData();
   formData.append("modelName", modelName); // Model Name
   formData.append("file", file); // CSV File
-  formData.append("sy", schoolYearSelect.value); // School Year
+  formData.append("school_year", schoolYearSelect.value); // School Year
   formData.append("semester", semesterSelect.value); // Semester
   formData.append("classifierModel", classifierModel.value); // classifier Model
 
@@ -355,7 +355,7 @@ async function viewUploadedFiles() {
               ${m.filename}
             </div>
           </td>
-          <td>${m.no_of_data}</td>
+          <td>${m.data_count}</td>
           <td>
             <div class="tooltip" data-fulltext="${m.date_uploaded}">
               ${m.date_uploaded}
@@ -483,7 +483,7 @@ async function viewPlayground() {
   models.forEach((model) => {
     const option = document.createElement("option");
     option.value = model.model_name;
-    option.textContent = `${model.model_name} (${model.classifier} - ${model.accuracy}% accuracy)`;
+    option.textContent = `${model.model_name} (${model.classifier_name} - ${model.metrics.accuracy}% accuracy)`;
     selectElement.appendChild(option);
   });
 }
@@ -541,9 +541,9 @@ async function get_sentiments() {
     let counter = 1;
     for (const [comment, item] of Object.entries(data.sentiments || data)) {
       const color =
-        item.sentiment === "positive"
+        item.sentiment === "Positive"
           ? "blue"
-          : item.sentiment === "negative"
+          : item.sentiment === "Negative"
           ? "red"
           : "black";
 
