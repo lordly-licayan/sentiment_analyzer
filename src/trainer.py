@@ -15,7 +15,7 @@ from src import (
 )
 
 
-from src.db.crud.comments import list_all_comments
+from src.db.crud.traineddata import list_all_trained_data
 from src.db.crud.fileinfo import get_fileinfo
 from src.db.crud.trainedmodel import get_trained_model_name
 from src.db.crud.trainedmodelresult import (
@@ -197,7 +197,7 @@ async def process_data_and_train(
         # Retrieve existing comments if logistic regression
         if classifier_model == LOGISTIC_REGRESSION_MODEL:
             # retrieve comments from the database
-            retrieved_comments = list_all_comments(db)
+            retrieved_comments = list_all_trained_data(db)
 
             # combine retrieved comments and the new comments
             combined_comments = {

@@ -26,20 +26,20 @@ class FileInfo(FileInfoBase):
 
 
 # ---------------------
-# Comments Schemas
+# TrainedData Schemas
 # ---------------------
-class CommentBase(BaseModel):
+class TrainedDataBase(BaseModel):
     file_id: str
     comment: str
     label: int
     remarks: Optional[str] = None
 
 
-class CommentCreate(CommentBase):
+class TrainedDataCreate(TrainedDataBase):
     pass
 
 
-class Comment(CommentBase):
+class TrainedData(TrainedDataBase):
     id: int
 
     model_config = {"from_attributes": True}

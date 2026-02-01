@@ -14,19 +14,19 @@ CREATE TABLE IF NOT EXISTS file_info (
 );
 
 -- =========================================
--- Table: comment
+-- Table: trained_data
 -- =========================================
 -- Drop the table if it already exists
-DROP TABLE IF EXISTS comment CASCADE;
+DROP TABLE IF EXISTS trained_data CASCADE;
 
-CREATE TABLE IF NOT EXISTS comment (
+CREATE TABLE IF NOT EXISTS trained_data (
     id SERIAL PRIMARY KEY,
     file_id VARCHAR(255) NOT NULL,
     comment TEXT NOT NULL,
     label INTEGER NOT NULL,
     remarks TEXT,
 
-    CONSTRAINT fk_comment_file_info
+    CONSTRAINT fk_trained_data_file_info
         FOREIGN KEY (file_id)
         REFERENCES file_info(file_id)
         ON DELETE CASCADE
@@ -71,7 +71,3 @@ CREATE TABLE IF NOT EXISTS trained_model_result (
         REFERENCES trained_model(id)
         ON DELETE CASCADE
 );
-
-
-
-

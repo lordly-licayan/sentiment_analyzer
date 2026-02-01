@@ -28,10 +28,11 @@ from src import (
 from uuid import uuid4
 
 
-from src.db.crud.comments import create_comments
+from src.db.crud.traineddata import create_trained_data
 from src.db.crud.fileinfo import create_fileinfo, list_fileinfo
 from src.db.crud.trainedmodel import create_trained_model, list_trained_models
-from src.db.schemas import CommentBase, FileInfoBase, TrainedModelBase
+from src.db.models import TrainedData
+from src.db.schemas import FileInfoBase, TrainedModelBase
 
 # -----------------------------------------------------------
 # LOGGING CONFIGURATION
@@ -352,12 +353,12 @@ def save_comments(db, file_id, comments, labels, sentiments):
 
     for comment, label, sentiment in zip(comments, labels, sentiments):
         data.append(
-            CommentBase(
+            TrainedData(
                 file_id=file_id, comment=comment, label=label, remarks=sentiment
             )
         )
 
-    create_comments(db, data)
+    create_trained_data(db, data)
 
 
 def save_trained_model(

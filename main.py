@@ -29,8 +29,8 @@ from src import (
     DEFAULT_TRAINED_MODEL_NAME,
     SUPPORTED_CLASSIFIERS,
 )
-from src.db.crud.comments import (
-    paginate_comments,
+from src.db.crud.traineddata import (
+    paginate_trained_data,
 )
 from src.db.crud.fileinfo import delete_fileinfo, get_fileinfo
 from src.db.crud.trainedmodel import (
@@ -243,7 +243,7 @@ async def get_trained_model_results_paging(
 
 
 @app.get("/comments-paging")
-async def get_comments_paging(
+async def get_trained_data_paging(
     file_id: Optional[str] = None,
     cursor: int | None = None,
     limit: int = 50,
@@ -258,10 +258,10 @@ async def get_comments_paging(
             )
         filename = fileinfo.filename
 
-    list_of_comments = await run_in_threadpool(
-        paginate_comments, db, file_id, limit, cursor
+    list_of_trained_data = await run_in_threadpool(
+        paginate_trained_data, db, file_id, limit, cursor
     )
-    result = {"filename": filename, "comments": list_of_comments}
+    result = {"filename": filename, "comments": list_of_trained_data}
     return result
 
 

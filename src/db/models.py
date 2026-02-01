@@ -38,9 +38,9 @@ class FileInfo(Base):
     date_uploaded = Column(DateTime(timezone=True), server_default=func.now())
     remarks = Column(Text)
 
-    # one file → many comments
-    comments = relationship(
-        "Comment", back_populates="file_info", cascade="all, delete-orphan"
+    # one file → many trained data
+    trained_data = relationship(
+        "TrainedData", back_populates="file_info", cascade="all, delete-orphan"
     )
 
     def to_dict(self):
@@ -50,19 +50,19 @@ class FileInfo(Base):
         return d
 
 
-class Comment(Base):
-    __tablename__ = "comment"
+class TrainedData(Base):
+    __tablename__ = "trained_data"
 
     id = Column(Integer, primary_key=True, index=True)
     file_id = Column(
-        Integer, ForeignKey("file_info.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("file_info.file_id", ondelete="CASCADE"), nullable=False
     )
     comment = Column(Text, nullable=False)
     label = Column(Integer, nullable=False)
     remarks = Column(Text)
 
-    # many comments → one file
-    file_info = relationship("FileInfo", back_populates="comments")
+    # many trained data → one file
+    file_info = relationship("FileInfo", back_populates="trained_data")
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
