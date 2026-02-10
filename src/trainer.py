@@ -11,6 +11,7 @@ from src import (
     LABEL_MAP,
     LOGISTIC_REGRESSION_MODEL,
     SUPPORTED_CLASSIFIERS,
+    SVM_CLASSIFIER_MODEL,
 )
 
 
@@ -177,7 +178,7 @@ async def process_data_and_train(
             update_job(job_id, feedback=f"{errors}")
 
         # Retrieve existing comments if logistic regression
-        if classifier_model == LOGISTIC_REGRESSION_MODEL:
+        if classifier_model in [LOGISTIC_REGRESSION_MODEL, SVM_CLASSIFIER_MODEL]:
             # retrieve comments from the database
             retrieved_comments = list_all_trained_data(db)
 
