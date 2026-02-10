@@ -23,10 +23,11 @@ SUPPORTED_CLASSIFIERS = json.loads(
 )
 DEFAULT_CLASSIFIER = os.getenv("DEFAULT_CLASSIFIER", "LogisticRegression")
 DEFAULT_TEST_SIZE = float(os.getenv("DEFAULT_TEST_SIZE", 0.2))
-
+RANDOM_STATE = int(os.getenv("RANDOM_STATE", 42))
 
 LOGISTIC_REGRESSION_MODEL = os.getenv("LOGISTIC_REGRESSION_MODEL", "LogisticRegression")
 SGD_CLASSIFIER_MODEL = os.getenv("SGD_CLASSIFIER_MODEL", "SGDClassifier")
+SVM_CLASSIFIER_MODEL = os.getenv("SVM_CLASSIFIER_MODEL", "SVMClassifier")
 
 TRAINED_MODEL_DIR = os.getenv("TRAINED_MODEL_DIR", "trained_model")
 DEFAULT_TRAINED_MODEL_NAME = os.getenv("DEFAULT_TRAINED_MODEL_NAME", "sentiment_model")

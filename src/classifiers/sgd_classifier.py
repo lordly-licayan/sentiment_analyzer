@@ -1,164 +1,186 @@
 import numpy as np
 from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import train_test_split
-from src import DEFAULT_TEST_SIZE, PATIENCE
-from src.helper import logger, update_job
+from src import DEFAULT_TEST_SIZE, PATIENCE, RANDOM_STATE
+from src.classifiers.classifier_trainer import ClassifierTrainer
+from src.helper import logger, retrieve_trained_model, update_job
 from sklearn.metrics import classification_report, accuracy_score
 
 
-def create_SGD_classifier():
-    """
-    Create a SGDClassifier with predefined parameters.
-    """
-    clf = SGDClassifier(
-        loss="log_loss",
-        penalty="l2",
-        alpha=1e-4,
-        learning_rate="optimal",
-        eta0=0.001,
-        max_iter=1,
-        warm_start=True,
-        tol=None,
-        random_state=42,
-    )
+class SGDClassifierModel(ClassifierTrainer):
+    def __init__(self, model_name=None):
+        self.model_name = model_name
+        self.clf = retrieve_trained_model(model_name)
 
-    return clf
+        if self.clf is None:
+            self.clf = self.create_SGD_classifier()
+        elif not isinstance(self.clf, SGDClassifier):
+            raise TypeError(f"Loaded model must be SGDClassifier, got {type(self.clf)}")
 
+    def get_classifier(self):
+        return self.clf
 
-def calculate_epochs(n_samples: int) -> int:
-    """
-    Automatically adjust number of epochs based on dataset size
-    """
-    if n_samples < 10000:
-        return 15
-    elif n_samples <= 50000:
-        return 20
-    elif n_samples <= 100000:
-        return 25
-    else:
-        return 10  # For very large datasets, use fewer epochs with partial_fit
-
-
-def train_sgd_classifier(job_id, clf, X, y, comments, test_size=DEFAULT_TEST_SIZE):
-    """
-    Train SGDClassifier with training/validation split and early stopping.
-
-    Args:
-        job_id: ID for logging
-        clf: SGDClassifier instance
-        X: Features (embeddings)
-        y: Labels
-        test_size: Fraction for validation
-
-    Returns:
-        report: Classification report on validation set
-    """
-
-    logger.info("Training using SGDClassifier model.")
-    update_job(
-        job_id,
-        status="Training",
-        message=f"Training {X.shape[0]} data using SGDClassifier...",
-    )
-
-    # Split into training and validation
-    X_train, X_val, y_train, y_val, texts_train, texts_val = train_test_split(
-        X, y, comments, test_size=test_size, random_state=42, stratify=y
-    )
-
-    # Scale embeddings
-    n_samples = X_train.shape[0]
-    epochs = calculate_epochs(n_samples)
-    classes = np.unique(y_train)  # full set of labels
-
-    logger.info(f"Job {job_id}: Starting training for {epochs} epochs.")
-    update_job(
-        job_id,
-        message="Starting training for {epochs} epochs.",
-    )
-
-    # Early stopping variables
-    best_acc = 0
-    wait = 0
-    patience = int(PATIENCE)  # default 5 if not set
-
-    for epoch in range(epochs):
-
-        # Shuffle training data each epoch
-        indices = np.random.permutation(n_samples)
-        X_epoch = X_train[indices]
-        y_epoch = y_train[indices]
-
-        # Train 1 epoch
-        clf.partial_fit(X_epoch, y_epoch, classes=classes)
-
-        # Evaluate on validation set
-        y_val_pred = clf.predict(X_val)
-        y_val_proba = clf.predict_proba(X_val)  # shape: (n_samples, n_classes)
-
-        acc = accuracy_score(y_val, y_val_pred)
-        progress = int((epoch + 1) / epochs * 100)
-        logger.info(
-            f"Epoch {epoch+1}/{epochs} - Val Accuracy: {acc:.4f} - Progress: {progress}%"
+    def create_SGD_classifier(self) -> SGDClassifier:
+        """
+        Create a SGDClassifier with predefined parameters.
+        """
+        clf = SGDClassifier(
+            loss="log_loss",
+            penalty="l2",
+            alpha=1e-4,
+            learning_rate="optimal",
+            eta0=0.001,
+            max_iter=1,
+            warm_start=True,
+            tol=None,
+            random_state=RANDOM_STATE,
         )
+
+        return clf
+
+    def _calculate_epochs(self, n_samples: int) -> int:
+        """
+        Automatically adjust number of epochs based on dataset size
+        """
+        if n_samples < 10000:
+            return 15
+        elif n_samples <= 50000:
+            return 20
+        elif n_samples <= 100000:
+            return 25
+        else:
+            return 10  # For very large datasets, use fewer epochs with partial_fit
+
+    def train(
+        self,
+        job_id,
+        X,
+        y,
+        comments,
+        test_size=DEFAULT_TEST_SIZE,
+        random_state=RANDOM_STATE,
+    ):
+        """
+        Train SGDClassifier with training/validation split and early stopping.
+
+        Args:
+            job_id (str): Job identifier for status updates
+            X (np.array): Training features
+            y (np.array or list): Training labels
+            test_size (float): Fraction of data for validation
+            random_state (int): Random seed for reproducibility
+        Returns:
+            metrics: Dictionary of training metrics
+            evaluation_results: List of dictionaries with comment, true label, predicted label, and confidence
+        """
+
+        logger.info("Training using SGDClassifier model.")
+        update_job(
+            job_id,
+            status="Training",
+            message=f"Training {X.shape[0]} data using SGDClassifier...",
+        )
+
+        # Split into training and validation
+        X_train, X_val, y_train, y_val, texts_train, texts_val = train_test_split(
+            X, y, comments, test_size=test_size, random_state=random_state, stratify=y
+        )
+
+        # Scale embeddings
+        n_samples = X_train.shape[0]
+        epochs = self._calculate_epochs(n_samples)
+        classes = np.unique(y_train)  # full set of labels
+
+        logger.info(f"Job {job_id}: Starting training for {epochs} epochs.")
+        update_job(
+            job_id,
+            message="Starting training for {epochs} epochs.",
+        )
+
+        # Early stopping variables
+        best_acc = 0
+        wait = 0
+        patience = int(PATIENCE)  # default 5 if not set
+
+        for epoch in range(epochs):
+
+            # Shuffle training data each epoch
+            indices = np.random.permutation(n_samples)
+            X_epoch = X_train[indices]
+            y_epoch = y_train[indices]
+
+            if epoch == 0:
+                self.clf.partial_fit(X_epoch, y_epoch, classes=classes)
+            else:
+                self.clf.partial_fit(X_epoch, y_epoch)
+
+            # Evaluate on validation set
+            y_val_pred = self.clf.predict(X_val)
+            y_val_proba = self.clf.predict_proba(X_val)  # shape: (n_samples, n_classes)
+
+            acc = accuracy_score(y_val, y_val_pred)
+            progress = int((epoch + 1) / epochs * 100)
+            logger.info(
+                f"Epoch {epoch+1}/{epochs} - Val Accuracy: {acc:.4f} - Progress: {progress}%"
+            )
+
+            update_job(
+                job_id,
+                progress=f"{progress}%",
+                accuracy=f"{acc * 100:.2f}%",
+                message=f"Training epoch {epoch+1}/{epochs}.",
+            )
+
+            # Early stopping
+            if acc > best_acc:
+                best_acc = acc
+                wait = 0
+            else:
+                wait += 1
+
+            if wait >= patience:
+                logger.warning("⏹ Early stopping triggered")
+                break
+
+        # Final evaluation on validation set
+        report = classification_report(y_val, y_val_pred, output_dict=True)
+
+        evaluation_results = []
+        for i, (comment, true_label, pred_label) in enumerate(
+            zip(texts_val, y_val, y_val_pred)
+        ):
+            class_probs = y_val_proba[i]  # probabilities for this sample
+
+            evaluation_results.append(
+                {
+                    "comment": comment,
+                    "actual_label": str(true_label),
+                    "predicted_label": str(pred_label),
+                    "is_matched": str(true_label) == str(pred_label),
+                    "confidence": float(round(max(class_probs) * 100, 2)),
+                }
+            )
+
+        metrics = {
+            "accuracy": round(acc * 100, 2),
+            "weighted_average": {
+                "precision": round(report["weighted avg"]["precision"] * 100, 2),
+                "recall": round(report["weighted avg"]["recall"] * 100, 2),
+                "f1_score": round(report["weighted avg"]["f1-score"] * 100, 2),
+            },
+            "macro_average": {
+                "precision": round(report["macro avg"]["precision"] * 100, 2),
+                "recall": round(report["macro avg"]["recall"] * 100, 2),
+                "f1_score": round(report["macro avg"]["f1-score"] * 100, 2),
+            },
+        }
+
+        logger.info(f"Training completed. Best Val Accuracy: {best_acc:.4f}")
 
         update_job(
             job_id,
-            progress=f"{progress}%",
-            accuracy=f"{acc * 100:.2f}%",
-            message=f"Training epoch {epoch+1}/{epochs}.",
+            message="Done training SGD Classifier model.",
+            metrics=metrics,
         )
 
-        # Early stopping
-        if acc > best_acc:
-            best_acc = acc
-            wait = 0
-        else:
-            wait += 1
-
-        if wait >= patience:
-            logger.warning("⏹ Early stopping triggered")
-            break
-
-    # Final evaluation on validation set
-    report = classification_report(y_val, y_val_pred, output_dict=True)
-
-    evaluation_results = []
-    for i, (comment, true_label, pred_label) in enumerate(
-        zip(texts_val, y_val, y_val_pred)
-    ):
-        class_probs = y_val_proba[i]  # probabilities for this sample
-
-        evaluation_results.append(
-            {
-                "comment": comment,
-                "actual_label": str(true_label),
-                "predicted_label": str(pred_label),
-                "is_matched": str(true_label) == str(pred_label),
-                "confidence": float(round(max(class_probs) * 100, 2)),
-            }
-        )
-
-    metrics = {
-        "accuracy": round(acc * 100, 2),
-        "weighted_average": {
-            "precision": round(report["weighted avg"]["precision"] * 100, 2),
-            "recall": round(report["weighted avg"]["recall"] * 100, 2),
-            "f1_score": round(report["weighted avg"]["f1-score"] * 100, 2),
-        },
-        "macro_average": {
-            "precision": round(report["macro avg"]["precision"] * 100, 2),
-            "recall": round(report["macro avg"]["recall"] * 100, 2),
-            "f1_score": round(report["macro avg"]["f1-score"] * 100, 2),
-        },
-    }
-
-    logger.info(f"Training completed. Best Val Accuracy: {best_acc:.4f}")
-
-    update_job(
-        job_id,
-        message="Done training SGD Classifier model.",
-        metrics=metrics,
-    )
-
-    return metrics, evaluation_results
+        return metrics, evaluation_results

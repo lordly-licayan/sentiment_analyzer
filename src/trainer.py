@@ -15,6 +15,7 @@ from src import (
 )
 
 
+from src.classifiers.classifier_trainer_factory import ClassifierTrainerFactory
 from src.db.crud.traineddata import list_all_trained_data
 from src.db.crud.fileinfo import get_fileinfo
 from src.db.crud.trainedmodel import get_trained_model_name
@@ -37,14 +38,6 @@ from src.helper import (
     update_job,
     validate_comment_labels,
     validate_label_sentiments,
-)
-from src.classifiers.logistic_regression import (
-    create_logistic_regression,
-    train_logistic_regression,
-)
-from src.classifiers.sgd_classifier import (
-    create_SGD_classifier,
-    train_sgd_classifier,
 )
 
 
@@ -116,19 +109,29 @@ def perform_training(job_id, model_name, classifier_model, X_train, y_train, com
     """
     Perform training using the specified classifier.
     """
-    if classifier_model == DEFAULT_CLASSIFIER:
-        clf = create_logistic_regression()
-        metrics, evaluation_results = train_logistic_regression(
-            job_id, clf, X_train, y_train, comments
-        )
-    else:
-        clf = retrieve_trained_model(model_name)
-        if not clf:
-            clf = create_SGD_classifier()
-        metrics, evaluation_results = train_sgd_classifier(
-            job_id, clf, X_train, y_train, comments
-        )
-    return clf, metrics, evaluation_results
+    print(f"Selected classifier: {classifier_model}, model name: {model_name}  ")
+    clf = ClassifierTrainerFactory.get_classifier_trainer(classifier_model, model_name)
+    metrics, evaluation_results = clf.train(job_id, X_train, y_train, comments)
+
+    # if classifier_model == DEFAULT_CLASSIFIER:
+    #     clf = create_logistic_regression()
+    #     metrics, evaluation_results = train_logistic_regression(
+    #         job_id, clf, X_train, y_train, comments
+    #     )
+    # else:
+    #     clf = retrieve_trained_model(model_name)
+    #     if not clf:
+    #         clf = create_SGD_classifier()
+    #     metrics, evaluation_results = train_sgd_classifier(
+    #         job_id, clf, X_train, y_train, comments
+    #     )
+    # clf = retrieve_trained_model(model_name)
+    # if not clf:
+    #     clf = create_SGD_classifier()
+    # metrics, evaluation_results = train_sgd_classifier(
+    #     job_id, clf, X_train, y_train, comments
+    # )
+    return clf.get_classifier(), metrics, evaluation_results
 
 
 # -----------------------------------------------------------

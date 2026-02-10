@@ -2,91 +2,104 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
 
-from src import DEFAULT_TEST_SIZE
+from src import DEFAULT_TEST_SIZE, RANDOM_STATE
+from src.classifiers.classifier_trainer import ClassifierTrainer
 from src.helper import logger, update_job
 
 
-def create_logistic_regression(max_iter=1000, solver="lbfgs"):
-    clf = LogisticRegression(max_iter=max_iter, solver=solver)
-    return clf
+class LogisticRegressionClassifier(ClassifierTrainer):
+    def __init__(self, model_name=None, max_iter=1000, solver="lbfgs"):
+        """Initialize the classifier."""
+        self.clf = LogisticRegression(max_iter=max_iter, solver=solver)
+        self.X_train = None
+        self.y_train = None
+        self.model_name = model_name
 
+    def get_classifier(self):
+        return self.clf
 
-def train_logistic_regression(
-    job_id, clf, X, y, comments, test_size=DEFAULT_TEST_SIZE, random_state=42
-):
-    """
-    Train Logistic Regression model and update job status.
-    Args:
-        job_id (str): Job identifier for status updates
-        X (np.array): Training features
-        y (np.array or list): Training labels
-        test_size (float): Fraction of data for validation
-        random_state (int): Random seed for reproducibility
-    Returns:
-        report: Classification report dictionary
-    """
-
-    logger.info("Training using LogisticRegression model.")
-    update_job(
+    def train(
+        self,
         job_id,
-        status="Training",
-        message=f"Training {X.shape[0]} data using LogisticRegression...",
-    )
-
-    # Split train & validation
-    X_train, X_val, y_train, y_val, texts_train, texts_val = train_test_split(
-        X, y, comments, test_size=test_size, random_state=random_state, stratify=y
-    )
-
-    clf.fit(X_train, y_train)
-
-    update_job(
-        job_id,
-        status="Evaluating",
-        message="Evaluating accuracy of the model...",
-    )
-
-    # Evaluate on validation set
-    y_val_pred = clf.predict(X_val)
-    y_val_proba = clf.predict_proba(X_val)  # shape: (n_samples, n_classes)
-    val_report = classification_report(y_val, y_val_pred, output_dict=True)
-    val_acc = accuracy_score(y_val, y_val_pred)
-
-    evaluation_results = []
-    for i, (comment, true_label, pred_label) in enumerate(
-        zip(texts_val, y_val, y_val_pred)
+        X,
+        y,
+        comments,
+        test_size=DEFAULT_TEST_SIZE,
+        random_state=RANDOM_STATE,
     ):
-        class_probs = y_val_proba[i]  # probabilities for this sample
+        """
+        Train Logistic Regression model and update job status.
+        Args:
+            job_id (str): Job identifier for status updates
+            X (np.array): Training features
+            y (np.array or list): Training labels
+            test_size (float): Fraction of data for validation
+            random_state (int): Random seed for reproducibility
+        Returns:
+            report: Classification report dictionary
+        """
 
-        evaluation_results.append(
-            {
-                "comment": comment,
-                "actual_label": str(true_label),
-                "predicted_label": str(pred_label),
-                "is_matched": str(true_label) == str(pred_label),
-                "confidence": float(round(max(class_probs) * 100, 2)),
-            }
+        logger.info("Training using LogisticRegression model.")
+        update_job(
+            job_id,
+            status="Training",
+            message=f"Training {X.shape[0]} data using LogisticRegression...",
         )
 
-    metrics = {
-        "accuracy": round(val_acc * 100, 2),
-        "weighted_average": {
-            "precision": round(val_report["weighted avg"]["precision"] * 100, 2),
-            "recall": round(val_report["weighted avg"]["recall"] * 100, 2),
-            "f1_score": round(val_report["weighted avg"]["f1-score"] * 100, 2),
-        },
-        "macro_average": {
-            "precision": round(val_report["macro avg"]["precision"] * 100, 2),
-            "recall": round(val_report["macro avg"]["recall"] * 100, 2),
-            "f1_score": round(val_report["macro avg"]["f1-score"] * 100, 2),
-        },
-    }
+        # Split train & validation
+        X_train, X_val, y_train, y_val, texts_train, texts_val = train_test_split(
+            X, y, comments, test_size=test_size, random_state=random_state, stratify=y
+        )
 
-    logger.info(f"Training complete. Report: {metrics}")
+        self.clf.fit(X_train, y_train)
 
-    update_job(
-        job_id,
-        message="Done training logistic regression model.",
-        metrics=metrics,
-    )
-    return metrics, evaluation_results
+        update_job(
+            job_id,
+            status="Evaluating",
+            message="Evaluating accuracy of the model...",
+        )
+
+        # Evaluate on validation set
+        y_val_pred = self.clf.predict(X_val)
+        y_val_proba = self.clf.predict_proba(X_val)  # shape: (n_samples, n_classes)
+        val_report = classification_report(y_val, y_val_pred, output_dict=True)
+        val_acc = accuracy_score(y_val, y_val_pred)
+
+        evaluation_results = []
+        for i, (comment, true_label, pred_label) in enumerate(
+            zip(texts_val, y_val, y_val_pred)
+        ):
+            class_probs = y_val_proba[i]  # probabilities for this sample
+
+            evaluation_results.append(
+                {
+                    "comment": comment,
+                    "actual_label": str(true_label),
+                    "predicted_label": str(pred_label),
+                    "is_matched": str(true_label) == str(pred_label),
+                    "confidence": float(round(max(class_probs) * 100, 2)),
+                }
+            )
+
+        metrics = {
+            "accuracy": round(val_acc * 100, 2),
+            "weighted_average": {
+                "precision": round(val_report["weighted avg"]["precision"] * 100, 2),
+                "recall": round(val_report["weighted avg"]["recall"] * 100, 2),
+                "f1_score": round(val_report["weighted avg"]["f1-score"] * 100, 2),
+            },
+            "macro_average": {
+                "precision": round(val_report["macro avg"]["precision"] * 100, 2),
+                "recall": round(val_report["macro avg"]["recall"] * 100, 2),
+                "f1_score": round(val_report["macro avg"]["f1-score"] * 100, 2),
+            },
+        }
+
+        logger.info(f"Training complete. Report: {metrics}")
+
+        update_job(
+            job_id,
+            message="Done training logistic regression model.",
+            metrics=metrics,
+        )
+        return metrics, evaluation_results

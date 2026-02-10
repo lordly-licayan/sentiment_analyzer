@@ -9,6 +9,7 @@ import logging
 import joblib
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
+from sklearn.linear_model import LogisticRegression, SGDClassifier
 from managers.storage_manager import (
     delete_blob,
     file_exists,
@@ -405,19 +406,37 @@ def save_trained_model(
 
 def retrieve_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
     """
-    Retrieve the trained model from local storage or cloud storage.
+    Retrieve the trained model from local storage or Google Cloud.
     """
 
+    if not model_name:
+        return None
+
     clf = None
-    if SAVE_TO_CLOUD_STORAGE:
-        if file_exists(model_name):
-            content = read_file_from_gcs(model_name)
-            file_obj = io.BytesIO(content)
-            clf = joblib.load(file_obj)
-    else:
-        model_path = os.path.join(model_dir, model_name)
-        if os.path.exists(model_path):
-            clf = joblib.load(model_path)
+
+    try:
+        if SAVE_TO_CLOUD_STORAGE:
+            if file_exists(model_name):
+                content = read_file_from_gcs(model_name)
+                file_obj = io.BytesIO(content)
+                clf = joblib.load(file_obj)
+        else:
+            model_path = os.path.join(model_dir, model_name)
+            if os.path.exists(model_path):
+                clf = joblib.load(model_path)
+
+    except Exception as e:
+        logger.exception(f"Failed to load model '{model_name}': {e}")
+        return None
+
+    ALLOWED_MODELS = (SGDClassifier, LogisticRegression)
+
+    if clf is not None and not isinstance(clf, ALLOWED_MODELS):
+        raise TypeError(
+            f"Invalid model type loaded for '{model_name}'. "
+            f"Expected one of {ALLOWED_MODELS}, got {type(clf)}"
+        )
+
     return clf
 
 
