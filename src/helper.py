@@ -9,6 +9,7 @@ import logging
 import joblib
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
+from sklearn.calibration import LinearSVC
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from managers.storage_manager import (
     delete_blob,
@@ -429,7 +430,7 @@ def retrieve_trained_model(model_name: str, model_dir=TRAINED_MODEL_DIR):
         logger.exception(f"Failed to load model '{model_name}': {e}")
         return None
 
-    ALLOWED_MODELS = (SGDClassifier, LogisticRegression)
+    ALLOWED_MODELS = (LogisticRegression, SGDClassifier, LinearSVC)
 
     if clf is not None and not isinstance(clf, ALLOWED_MODELS):
         raise TypeError(
@@ -530,14 +531,3 @@ def list_of_uploaded_files(db):
     uploaded_files = list_fileinfo(db)
     result = [m.to_dict() for m in uploaded_files]
     return result
-
-
-# def classify_comment(model, category_embeddings, comment: str):
-#     comment_emb = model.encode(comment, convert_to_tensor=True)
-#     similarities = util.cos_sim(comment_emb, category_embeddings)[0]
-
-#     best_idx = similarities.argmax().item()
-#     best_cat = TEACHER_EVALUATION_CATEGORIES[best_idx]
-#     best_score = similarities[best_idx].item()
-
-#     return best_cat, best_score

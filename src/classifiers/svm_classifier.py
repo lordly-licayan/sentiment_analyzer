@@ -1,19 +1,35 @@
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, accuracy_score
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from sklearn.svm import LinearSVC
+from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, accuracy_score
+
 
 from src import DEFAULT_TEST_SIZE, RANDOM_STATE
 from src.classifiers.classifier_trainer import ClassifierTrainer
 from src.helper import logger, update_job
 
 
-class LogisticRegressionModel(ClassifierTrainer):
-    def __init__(self, model_name=None, max_iter=1000, solver="lbfgs"):
-        self.clf = LogisticRegression(max_iter=max_iter, solver=solver)
+class SVMClassifierModel(ClassifierTrainer):
+    def __init__(self, model_name=None):
+        """Initialize the classifier."""
+
+        self.clf = self._create_SVM_classifier()
         self.model_name = model_name
+
+    def _create_SVM_classifier(self) -> LinearSVC:
+        """
+        Create a LinearSVC with predefined parameters.
+        """
+        self.clf = LinearSVC(C=1.0, class_weight="balanced", max_iter=2000)
+        return self.clf
 
     def get_classifier(self):
         return self.clf
+
+    def _sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
 
     def train(
         self,
@@ -36,11 +52,11 @@ class LogisticRegressionModel(ClassifierTrainer):
             report: Classification report dictionary
         """
 
-        logger.info("Training using LogisticRegression model.")
+        logger.info("Training using SVM Classifier model.")
         update_job(
             job_id,
             status="Training",
-            message=f"Training {X.shape[0]} data using LogisticRegression...",
+            message=f"Training {X.shape[0]} data using SVM Classifier...",
         )
 
         # Split train & validation
@@ -58,7 +74,7 @@ class LogisticRegressionModel(ClassifierTrainer):
 
         # Evaluate on validation set
         y_val_pred = self.clf.predict(X_val)
-        y_val_proba = self.clf.predict_proba(X_val)  # shape: (n_samples, n_classes)
+        decision_scores = self.clf.decision_function(X_val)
         val_report = classification_report(y_val, y_val_pred, output_dict=True)
         val_acc = accuracy_score(y_val, y_val_pred)
 
@@ -66,7 +82,8 @@ class LogisticRegressionModel(ClassifierTrainer):
         for i, (comment, true_label, pred_label) in enumerate(
             zip(texts_val, y_val, y_val_pred)
         ):
-            class_probs = y_val_proba[i]  # probabilities for this sample
+            raw_confidence = float(np.max(decision_scores[i]))
+            confidence_pct = float(round(self._sigmoid(raw_confidence) * 100, 2))
 
             evaluation_results.append(
                 {
@@ -74,7 +91,7 @@ class LogisticRegressionModel(ClassifierTrainer):
                     "actual_label": str(true_label),
                     "predicted_label": str(pred_label),
                     "is_matched": str(true_label) == str(pred_label),
-                    "confidence": float(round(max(class_probs) * 100, 2)),
+                    "confidence": confidence_pct,
                 }
             )
 

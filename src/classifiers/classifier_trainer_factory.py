@@ -1,19 +1,24 @@
 from src.classifiers.classifier_trainer import ClassifierTrainer
-from src.classifiers.logistic_regression import LogisticRegressionClassifier
+from src.classifiers.logistic_regression import LogisticRegressionModel
 from src.classifiers.sgd_classifier import SGDClassifierModel
+from src.classifiers.svm_classifier import SVMClassifierModel
 
 
 class ClassifierTrainerFactory:
+    """Factory class to create classifier trainers based on the specified model name."""
+
     _classifiers = {
-        "LogisticRegression": LogisticRegressionClassifier,
+        "LogisticRegression": LogisticRegressionModel,
         "SGDClassifier": SGDClassifierModel,
-        # "SVMClassifier": SGDClassifierModel,
+        "SVMClassifier": SVMClassifierModel,
     }
 
     @staticmethod
     def get_classifier_trainer(
         classifier_name: str, model_name: str = None
     ) -> ClassifierTrainer:
+        """Get the appropriate classifier trainer based on the classifier name."""
+
         if classifier_name not in ClassifierTrainerFactory._classifiers:
             raise ValueError("Unsupported classifier.")
         return ClassifierTrainerFactory._classifiers[classifier_name](
