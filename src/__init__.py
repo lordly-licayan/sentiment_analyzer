@@ -35,9 +35,6 @@ DEFAULT_TRAINED_MODEL_NAME = os.getenv("DEFAULT_TRAINED_MODEL_NAME", "sentiment_
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", 64))
 PATIENCE = os.getenv("PATIENCE", 3)
 
-TEACHER_EVALUATION_CATEGORIES = os.getenv("TEACHER_EVALUATION_CATEGORIES", "").split(
-    ", "
-)
 
 SAVE_TO_CLOUD_STORAGE = os.getenv("SAVE_TO_CLOUD_STORAGE", "False").lower() == "true"
 

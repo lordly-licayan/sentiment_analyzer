@@ -112,3 +112,22 @@ def TrainModelFormDependency(
         semester=semester,
         classifierModel=classifierModel,
     )
+
+
+# ---------------------
+# AdminSettings Schemas
+# ---------------------
+class AdminSettingsBase(BaseModel):
+    id: int
+    model_name: str
+    categories: str
+
+
+class AdminSettingsCreate(AdminSettingsBase):
+    pass
+
+
+class AdminSettingsData(AdminSettingsBase):
+    id: int
+
+    model_config = {"from_attributes": True}

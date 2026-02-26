@@ -141,9 +141,14 @@ async function viewTrainedModelResults(data) {
   let counter = 1;
   tbody.innerHTML = ""; // clear previous comments
   const model_id = data?.model_id ?? null;
-  const model_name = data?. model_name ?? "Select a trained model";
+  const model_name = data?.model_name ?? "Select a trained model";
 
-  document.getElementById("trained_model_results_desc").innerText = "Trained Model Evaluation Result (" + model_name + ")"  ;
+  const descElement = document.getElementById("trained_model_results_desc");
+  descElement.innerHTML =
+    'Trained Model Evaluation Result (<span style="color: blue;">' +
+    model_name +
+    '</span>)';
+    
 
   // Function to load comments
   async function loadComments(model_id) {

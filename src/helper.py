@@ -24,12 +24,12 @@ from src import (
     JOBS,
     LABEL_MAP,
     SAVE_TO_CLOUD_STORAGE,
-    TEACHER_EVALUATION_CATEGORIES,
     TRAINED_MODEL_DIR,
 )
 from uuid import uuid4
 
 
+from src.db.crud.adminsettings import get_admin_settings
 from src.db.crud.traineddata import create_trained_data
 from src.db.crud.fileinfo import create_fileinfo, list_fileinfo
 from src.db.crud.trainedmodel import create_trained_model, list_trained_models
@@ -468,7 +468,7 @@ def sort_scores(scores: dict) -> dict:
     return dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
 
 
-def process_payload(trained_model, lines: list):
+def process_payload(trained_model, lines: list, categories: list):
     """
     Get sentiments for the given payload using the trained model.
     Args:
@@ -480,9 +480,8 @@ def process_payload(trained_model, lines: list):
 
     data = {}
     embedder = get_embedder()
-    category_embeddings = embedder.encode(
-        TEACHER_EVALUATION_CATEGORIES, convert_to_tensor=True
-    )
+
+    category_embeddings = embedder.encode(categories, convert_to_tensor=True)
 
     lines = list(set(lines))
 
@@ -496,7 +495,7 @@ def process_payload(trained_model, lines: list):
 
         # Get best category and score
         best_index = scores.index(max(scores))
-        best_category = TEACHER_EVALUATION_CATEGORIES[best_index]
+        best_category = categories[best_index]
 
         sentiment = trained_model.predict(comment_embedding)[0]
         data[line] = {
@@ -505,8 +504,8 @@ def process_payload(trained_model, lines: list):
             "top_category_score": round(float(scores[best_index] * 100), 2),
             "category": sort_scores(
                 {
-                    TEACHER_EVALUATION_CATEGORIES[i]: round(float(scores[i] * 100), 2)
-                    for i in range(len(TEACHER_EVALUATION_CATEGORIES))
+                    categories[i]: round(float(scores[i] * 100), 2)
+                    for i in range(len(categories))
                 }
             ),
         }

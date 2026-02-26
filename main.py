@@ -29,6 +29,7 @@ from src import (
     DEFAULT_TRAINED_MODEL_NAME,
     SUPPORTED_CLASSIFIERS,
 )
+from src.db.crud.adminsettings import get_admin_settings
 from src.db.crud.traineddata import (
     paginate_trained_data,
 )
@@ -140,7 +141,7 @@ async def job_status(job_id: str):
 
 
 @app.post("/predict-sentiment", response_model=SentimentResponse)
-async def predict_sentiments(request: SentimentRequest):
+async def predict_sentiments(request: SentimentRequest, db: Session = Depends(get_db)):
     """Endpoint to predict sentiments using a trained model.
     Args:
         request (SentimentRequest): Pydantic model containing model name and text.
@@ -160,7 +161,11 @@ async def predict_sentiments(request: SentimentRequest):
             status_code=500, detail=f"Model {request.model_name} not found!"
         )
 
-    result = await run_in_threadpool(process_payload, trained_model, request.lines)
+    categories = get_admin_settings(db)
+
+    result = await run_in_threadpool(
+        process_payload, trained_model, request.lines, categories
+    )
     return SentimentResponse(result)
 
 

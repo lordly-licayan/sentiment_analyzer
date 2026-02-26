@@ -127,3 +127,18 @@ class TrainedModelResult(Base):
             ),
             "is_matched": self.is_matched,
         }
+
+
+class AdminSettings(Base):
+    __tablename__ = "admin_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String(255))
+    categories = Column(Text)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "model_name": self.model_name,
+            "categories": self.categories,
+        }
